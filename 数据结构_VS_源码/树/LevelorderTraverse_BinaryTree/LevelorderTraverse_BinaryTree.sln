@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29102.190
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "LevelorderTraverse_BinaryTree", "LevelorderTraverse_BinaryTree.vcxproj", "{E9E3F47F-29AF-47E7-AD83-B2223246CDE8}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{E9E3F47F-29AF-47E7-AD83-B2223246CDE8}.Debug|x64.ActiveCfg = Debug|x64
+		{E9E3F47F-29AF-47E7-AD83-B2223246CDE8}.Debug|x64.Build.0 = Debug|x64
+		{E9E3F47F-29AF-47E7-AD83-B2223246CDE8}.Debug|x86.ActiveCfg = Debug|Win32
+		{E9E3F47F-29AF-47E7-AD83-B2223246CDE8}.Debug|x86.Build.0 = Debug|Win32
+		{E9E3F47F-29AF-47E7-AD83-B2223246CDE8}.Release|x64.ActiveCfg = Release|x64
+		{E9E3F47F-29AF-47E7-AD83-B2223246CDE8}.Release|x64.Build.0 = Release|x64
+		{E9E3F47F-29AF-47E7-AD83-B2223246CDE8}.Release|x86.ActiveCfg = Release|Win32
+		{E9E3F47F-29AF-47E7-AD83-B2223246CDE8}.Release|x86.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {3001773A-CF8E-4D49-BA28-2AB54B4EACE1}
+	EndGlobalSection
+EndGlobal

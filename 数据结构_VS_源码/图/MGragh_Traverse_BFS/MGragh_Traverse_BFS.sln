@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29123.88
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MGragh_Traverse_BFS", "MGragh_Traverse_BFS.vcxproj", "{F628F8C1-60BF-4702-89BC-85BA82282833}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F628F8C1-60BF-4702-89BC-85BA82282833}.Debug|x64.ActiveCfg = Debug|x64
+		{F628F8C1-60BF-4702-89BC-85BA82282833}.Debug|x64.Build.0 = Debug|x64
+		{F628F8C1-60BF-4702-89BC-85BA82282833}.Debug|x86.ActiveCfg = Debug|Win32
+		{F628F8C1-60BF-4702-89BC-85BA82282833}.Debug|x86.Build.0 = Debug|Win32
+		{F628F8C1-60BF-4702-89BC-85BA82282833}.Release|x64.ActiveCfg = Release|x64
+		{F628F8C1-60BF-4702-89BC-85BA82282833}.Release|x64.Build.0 = Release|x64
+		{F628F8C1-60BF-4702-89BC-85BA82282833}.Release|x86.ActiveCfg = Release|Win32
+		{F628F8C1-60BF-4702-89BC-85BA82282833}.Release|x86.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {5A6BDBB7-E499-4BAC-AE1A-6F692C5B0AE7}
+	EndGlobalSection
+EndGlobal
