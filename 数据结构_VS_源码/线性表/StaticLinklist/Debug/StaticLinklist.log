@@ -1,7 +1,0 @@
-﻿  StaticLinklist.c
-C:\Users\yexin\Desktop\数据结构\Data_structure Source Files\数据结构_VS版_项目\StaticLinklist\StaticLinklist.c(57,1): warning C4996:  'scanf': This function or variable may be unsafe. Consider using scanf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
-F:\Windows Kits\10\Include\10.0.17763.0\ucrt\stdio.h(1274): message :  参见“scanf”的声明
-C:\Users\yexin\Desktop\数据结构\Data_structure Source Files\数据结构_VS版_项目\StaticLinklist\StaticLinklist.c(69,1): warning C4996:  'scanf': This function or variable may be unsafe. Consider using scanf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
-F:\Windows Kits\10\Include\10.0.17763.0\ucrt\stdio.h(1274): message :  参见“scanf”的声明
-C:\Users\yexin\Desktop\数据结构\Data_structure Source Files\数据结构_VS版_项目\StaticLinklist\StaticLinklist.c(174,70): warning C4090:  “函数”: 不同的“const”限定符
-  StaticLinklist.vcxproj -> C:\Users\yexin\Desktop\数据结构\Data_structure Source Files\数据结构_VS版_项目\StaticLinklist\Debug\StaticLinklist.exe

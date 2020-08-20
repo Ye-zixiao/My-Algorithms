@@ -1,0 +1,10 @@
+﻿  MGragh_Traverse_BFS.c
+C:\Users\yexin\Desktop\数据结构\Data_structure Source Files\数据结构_VS版_项目\图\MGragh_Traverse_BFS\MGragh_Traverse_BFS.c(56,1): warning C4996:  'scanf': This function or variable may be unsafe. Consider using scanf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+F:\Windows Kits\10\Include\10.0.17763.0\ucrt\stdio.h(1274): message :  参见“scanf”的声明
+C:\Users\yexin\Desktop\数据结构\Data_structure Source Files\数据结构_VS版_项目\图\MGragh_Traverse_BFS\MGragh_Traverse_BFS.c(61,1): warning C4996:  'scanf': This function or variable may be unsafe. Consider using scanf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+F:\Windows Kits\10\Include\10.0.17763.0\ucrt\stdio.h(1274): message :  参见“scanf”的声明
+C:\Users\yexin\Desktop\数据结构\Data_structure Source Files\数据结构_VS版_项目\图\MGragh_Traverse_BFS\MGragh_Traverse_BFS.c(75,1): warning C4996:  'scanf': This function or variable may be unsafe. Consider using scanf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+F:\Windows Kits\10\Include\10.0.17763.0\ucrt\stdio.h(1274): message :  参见“scanf”的声明
+C:\Users\yexin\Desktop\数据结构\Data_structure Source Files\数据结构_VS版_项目\图\MGragh_Traverse_BFS\MGragh_Traverse_BFS.c(174,20): warning C4047:  “函数”:“int *”与“int”的间接级别不同
+C:\Users\yexin\Desktop\数据结构\Data_structure Source Files\数据结构_VS版_项目\图\MGragh_Traverse_BFS\MGragh_Traverse_BFS.c(174,20): warning C4024:  “dequeue”: 形参和实参 2 的类型不同
+  MGragh_Traverse_BFS.vcxproj -> C:\Users\yexin\Desktop\数据结构\Data_structure Source Files\数据结构_VS版_项目\图\MGragh_Traverse_BFS\Debug\MGragh_Traverse_BFS.exe

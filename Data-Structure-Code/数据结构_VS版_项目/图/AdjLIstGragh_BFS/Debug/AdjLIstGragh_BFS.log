@@ -1,0 +1,9 @@
+﻿  AdjLIstGragh_BFS.c
+C:\Users\yexin\Desktop\数据结构\Data_structure Source Files\数据结构_VS版_项目\图\AdjLIstGragh_BFS\AdjLIstGragh_BFS.c(64,1): warning C4996:  'scanf': This function or variable may be unsafe. Consider using scanf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+F:\Windows Kits\10\Include\10.0.17763.0\ucrt\stdio.h(1274): message :  参见“scanf”的声明
+C:\Users\yexin\Desktop\数据结构\Data_structure Source Files\数据结构_VS版_项目\图\AdjLIstGragh_BFS\AdjLIstGragh_BFS.c(74,1): warning C4996:  'scanf': This function or variable may be unsafe. Consider using scanf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+F:\Windows Kits\10\Include\10.0.17763.0\ucrt\stdio.h(1274): message :  参见“scanf”的声明
+C:\Users\yexin\Desktop\数据结构\Data_structure Source Files\数据结构_VS版_项目\图\AdjLIstGragh_BFS\AdjLIstGragh_BFS.c(84,1): warning C4996:  'scanf': This function or variable may be unsafe. Consider using scanf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+F:\Windows Kits\10\Include\10.0.17763.0\ucrt\stdio.h(1274): message :  参见“scanf”的声明
+C:\Users\yexin\Desktop\数据结构\Data_structure Source Files\数据结构_VS版_项目\图\AdjLIstGragh_BFS\AdjLIstGragh_BFS.c(105,49): warning C4133:  “=”: 从“PEDGENODE”到“PQUEUENODE”的类型不兼容
+  AdjLIstGragh_BFS.vcxproj -> C:\Users\yexin\Desktop\数据结构\Data_structure Source Files\数据结构_VS版_项目\图\AdjLIstGragh_BFS\Debug\AdjLIstGragh_BFS.exe
