@@ -581,3 +581,328 @@ int main(void){
 ### 1.5算法分析
 
 <img src="image/image-20201029142004452.png" alt="image-20201029142004452" style="zoom: 80%;" />
+
+### 1.6union-find算法
+
+union-find的API：`public class UF`
+
+- `UF(int N)`
+- `void find(int p)`
+- `int find(int pos)`
+- `boolean connected(int p,int q)`
+- `int count()`
+
+UF1：使用数组遍历式方式进行连通实现
+
+```java
+import edu.princeton.cs.algs4.In;
+import edu.princeton.cs.algs4.StdIn;
+import edu.princeton.cs.algs4.StdOut;
+
+public class UF1 {
+    private int[] id;
+    private int count;
+
+    public UF1(int N) {
+        id = new int[N];
+        count = N;
+        for (int i = 0; i < N; i++)
+            id[i] = i;
+    }
+
+    public int count() {
+        return count;
+    }
+
+    public int find(int pos) {
+        return id[pos];
+    }
+
+    public boolean connected(int p, int q) {
+        return find(p) == find(q);
+    }
+
+    public void union(int p, int q) {
+        int pID = find(p);
+        int qID = find(q);
+
+        if (pID == qID) return;
+        for (int i = 0; i < id.length; ++i)
+            if (id[i] == pID) id[i] = qID;
+        count--;
+    }
+
+    public static void main(String[] args) {
+        int[] array = In.readInts(args[0]);
+        int cnt = 0, N = array[cnt++];
+        UF1 uf1 = new UF1(N);
+
+        while (cnt < array.length) {
+            int p = array[cnt++];
+            int q = array[cnt++];
+            if (uf1.connected(p, q)) continue;
+            uf1.union(p, q);
+            StdOut.println(p + " " + q);
+        }
+        StdOut.println(uf1.count() + " components");
+    }
+}
+```
+
+
+
+UF2：使用节点连接到同一个树根的方式完成连通分量的来链接
+
+```java
+import edu.princeton.cs.algs4.In;
+import edu.princeton.cs.algs4.StdOut;
+
+public class UF2 {
+    private int[] id;
+    private int count;
+
+    public UF2(int N) {
+        id = new int[N];
+        count = N;
+        for (int i = 0; i < N; i++)
+            id[i] = i;
+    }
+
+    public int count() {
+        return count;
+    }
+
+    public int find(int pos) {
+        while (pos != id[pos]) pos = id[pos];
+        return pos;
+    }
+
+    public boolean connected(int p, int q) {
+        return find(p) == find(q);
+    }
+
+    public void union(int p, int q) {
+        int pID = find(p);
+        int qID = find(q);
+
+        if (pID != qID) {
+            id[pID] = qID;
+            count--;
+        }
+    }
+
+    public static void main(String[] args) {
+        int[] array = In.readInts(args[0]);
+        int cnt = 0, N = array[cnt++];
+        UF2 uf2 = new UF2(N);
+
+        while (cnt < array.length) {
+            int p = array[cnt++];
+            int q = array[cnt++];
+            if (uf2.connected(p, q)) continue;
+            uf2.union(p, q);
+            StdOut.println(p + " " + q);
+        }
+        StdOut.println(uf2.count() + " connected");
+    }
+}
+```
+
+图示链接过程：
+
+<img src="image/2020-10-30 200900.png" alt="2020-10-30 200900" style="zoom:67%;" />
+
+
+
+UF3：在UF2的基础上增加一个记录连通分量的节点数的数组，每次进行挂载（链接）的时候根据连通分量树的大小将小树挂在大树的根节点上
+
+```java
+import edu.princeton.cs.algs4.In;
+import edu.princeton.cs.algs4.StdOut;
+
+public class UF3 {
+    private int[] id;
+    private int[] sz;
+    private int count;
+
+    public UF3(int N) {
+        id = new int[N];
+        sz = new int[N];
+        count = N;
+        for (int i = 0; i < N; i++) {
+            id[i] = i;
+            sz[i] = 1;
+        }
+    }
+
+    public int count() {
+        return count;
+    }
+
+    public int find(int pos) {
+        while (pos != id[pos]) pos = id[pos];
+        return pos;
+    }
+
+    public boolean connected(int p, int q) {
+        return find(p) == find(q);
+    }
+
+    public void union(int p, int q) {
+        int pID = find(p);
+        int qID = find(q);
+
+        if (pID != qID) {
+            //将小树挂在大树的根节点上
+            if (sz[pID] < sz[qID]) {
+                id[pID] = qID;
+                sz[qID] += sz[pID];
+            } else {
+                id[qID] = pID;
+                sz[pID] += sz[qID];
+            }
+            count--;
+        }
+    }
+
+    public static void main(String[] args) {
+        int[] array = In.readInts(args[0]);
+        int cnt = 0, N = array[cnt++];
+        UF3 uf3 = new UF3(N);
+
+        while (cnt < array.length) {
+            int p = array[cnt++];
+            int q = array[cnt++];
+            if (uf3.connected(p, q)) continue;
+            uf3.union(p, q);
+            StdOut.println(p + " " + q);
+        }
+        StdOut.println(uf3.count() + " connected");
+    }
+}
+```
+
+链接图示：
+
+<img src="image/2020-10-30 211440.png" alt="屏幕截图 2020-10-30 211440" style="zoom: 80%;" />
+
+
+
+## 2.排序
+
+公共类API：`public class Sort`
+
+- `private  static boolean less(Comparable lhs, Comparable rhs)`
+- `private static void swap(Comparable[] a, int i,int j)`
+- `private static void show(Comparable[] a)`
+- `public static  boolean isSorted(Comparable[] a)`
+- `public static void sort(Comparable[] a)`
+
+封装sort静态方法的类展示如下，后面只展示sort()方法
+
+```java
+import edu.princeton.cs.algs4.In;
+import edu.princeton.cs.algs4.StdOut;
+import edu.princeton.cs.algs4.StdRandom;
+import jdk.nashorn.internal.ir.LiteralNode;
+
+public class Sort {
+    private static boolean less(Comparable lhs, Comparable rhs) {
+        return lhs.compareTo(rhs) < 0;
+    }
+
+    private static void swap(Comparable[] a, int i, int j) {
+        Comparable temp = a[i];
+        a[i] = a[j];
+        a[j] = temp;
+    }
+
+    private static void show(Comparable[] a) {
+        for (int i = 0; i < a.length; ++i)
+            StdOut.println(a[i]);
+    }
+
+    public static boolean isSorted(Comparable[] a) {
+        for (int i = 1; i < a.length; i++)
+            if (less(a[i], a[i - 1]))
+                return false;
+        return true;
+    }
+
+    public static void sort(Comparable[] a) {
+		//见下
+    }
+
+    public static void main(String[] args) {
+        Integer[] array = new Integer[100];
+        for (int i = 0; i < array.length; ++i)
+            array[i] = (Integer) StdRandom.uniform(0, 100);
+
+        sort(array);
+        show(array);
+    }
+}
+
+```
+
+
+
+### 2.1初级排序
+
+#### 2.1.1选择排序
+
+核心思想就是将依次最小的元素放在数组最前面
+
+```java
+    public static void sort(Comparable[] a) {
+        for (int i = 0; i < a.length; ++i) {
+            int min = i;
+            for (int j = i + 1; j < a.length; ++j) {//选取出最小下标
+                if (less(a[j], a[min]))
+                    min = j;
+            }
+            swap(a, i, min);
+        }
+    }
+```
+
+#### 2.1.2插入排序
+
+核心思想就是将第j个元素插入到数组前j-1个元素的某个恰当位置中
+
+解法1：
+
+```java
+    public static void sort(Comparable[] a) {
+        for (int i = 1; i < a.length; ++i) {
+            for (int j = i; j > 0 && less(a[j], a[j - 1]); --j)
+                swap(a, j, j - 1);
+        }
+    }
+```
+
+解法2：采用移动而不是交换，节省交换成本
+
+```java
+    public static void sort(Comparable[] a) {
+        for (int i = 1, j; i < a.length; ++i) {
+            for (j = i; j > 0 && less(a[j], a[j - 1]); --j)
+                a[j] = a[j - 1];
+            swap(a, i, j);
+        }
+    }
+```
+
+#### 2.1.3希尔排序
+
+```java
+    public static void sort(Comparable[] a) {
+        for (int h = a.length / 3; h >= 1; h /= 3) {
+            for (int i = h, j; i < a.length; i++) {
+                for (j = i; j >= h && less(a[j], a[j - h]); j -= h)
+                    swap(a,j,j-h);
+            }
+        }
+    }
+```
+
