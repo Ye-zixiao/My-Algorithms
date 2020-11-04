@@ -1278,6 +1278,8 @@ public class Sort {
 - `boolean isEmpty()`
 - `int size()`
 
+##### 最大堆
+
 一个允许动态调整的最大二叉堆：
 
 ```java
@@ -1322,7 +1324,8 @@ public class MaxPQ<Key extends Comparable<Key>> {
         return max;
     }
 
-    /* 工具方法 */
+    /* 工具方法： */
+    
     private boolean less(int i, int j) {
         return pq[i].compareTo(pq[j]) < 0;
     }
@@ -1375,4 +1378,137 @@ public class MaxPQ<Key extends Comparable<Key>> {
 }
 
 ```
+
+##### 索引优先队列
+
+
+
+##### 堆排序
+
+核心思想：先将需要排序的数组构建成为最大堆，然后与最后一个元素进行交换、递减堆大小并重新对根节点做下层操作，重复上述操作直到堆大小变成为0
+
+```java
+import edu.princeton.cs.algs4.StdOut;
+
+public class Sort {
+    private static void swap(Comparable[] a, int i, int j) {
+        Comparable temp = a[j];
+        a[j] = a[i];
+        a[i] = temp;
+    }
+
+    private static boolean less(Comparable lhs, Comparable rhs) {
+        return lhs.compareTo(rhs) < 0;
+    }
+
+    //元素下沉函数
+    private static void sink(Comparable[] a, int k, int N) {
+        while (2 * k + 1 < N) {
+            int j = 2 * k + 1;
+            if (j < N - 1 && less(a[j], a[j + 1])) j++;
+            if (!less(a[k], a[j])) break;
+            swap(a, k, j);
+            k = j;
+        }
+    }
+
+    //堆排序
+    public static void sort(Comparable[] a) {
+        int N = a.length;
+        /* 从底向上使用sink()函数构建最大堆（注意是从那个最后一个
+        	右子节点的节点开始sink()最大堆有序化） */
+        for (int k = N / 2 - 1; k >= 0; --k)
+            sink(a, k, N);
+        while (N > 0) {
+            swap(a, 0, --N);
+            sink(a, 0, N);
+        }
+    }
+
+    public static void show(Comparable[] a) {
+        for (Comparable item : a)
+            StdOut.println(item);
+    }
+
+    public static void main(String[] args) {
+        Integer[] array = new Integer[100];
+        for (int i = 0; i < array.length; ++i)
+            array[i] = array.length - i;
+        sort(array);
+        show(array);
+    }
+}
+```
+
+图示：
+
+<img src="image/2020-11-03 105203.png" alt="2020-11-03 105203" style="zoom:80%;" />
+
+C语言实现：
+
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define ARRAYLENGTH 100
+
+static void swap(int array[],int i,int j){
+    int temp=array[i];
+    array[i]=array[j];
+    array[j]=temp;
+}
+
+
+/* 最大堆元素下沉操作 */
+static void sink(int array[],int k,int N){
+    int lchild,rchild,maxchild;
+
+    while(2*k+1<N){
+        lchild=2*k+1;
+        rchild=2*k+2;
+        maxchild=lchild;
+        //想要实现逆序排序只要改变1、2两点的比较运算符即可
+        if(rchild<N&&array[lchild]<array[rchild])//1
+            maxchild=rchild;
+        if(array[maxchild]<array[k])//2
+            break;
+        swap(array,k,maxchild);
+        k=maxchild;
+    }
+}
+
+
+/* 堆排序 */
+void HeapSort(int array[],int N){
+    for(int k=N/2-1;k>=0;--k)
+        sink(array,k,N);
+    while(N>0){
+        swap(array,0,--N);
+        sink(array,0,N);
+    }
+}
+
+
+void show(int array[],int N){
+    for(int i=0;i<N;++i)
+        printf("%d\n",array[i]);
+}
+
+
+int main(void)
+{
+    int array[ARRAYLENGTH];
+    for(int i=0;i<ARRAYLENGTH;++i)
+        array[i]=ARRAYLENGTH-i;
+    HeapSort(array,ARRAYLENGTH);
+    show(array,ARRAYLENGTH);
+}
+```
+
+
+
+## 3.查找
+
+### 3.1符号表
 
