@@ -1512,3 +1512,34 @@ int main(void)
 
 ### 3.1符号表
 
+无序符号表API（也同样是有序符号表共同拥有的）：`public class ST<Key,Value>`
+
+- `ST()`
+- `void put(Key key,Value value)`
+- `Value get(Key key)`
+- `void delete(Key key)`
+- `boolean contains()`
+- `boolean isEmpty()`
+- `int size()`
+- `Iterable<Key> keys()`
+
+有序符号表增加的API：
+
+- `Key min()`
+- `Key max()`
+- `Key floor(Key key)`
+- `Key ceiling(Key key)`
+- `int rank()`
+- `Key select(int k)`
+- `void deleteMin()`
+- `void deleteMax()`
+- `int size(Key lo,Key hi)`
+- `Iterable<Key> keys(Key lo,Key hi)`
+- `Iterable<Key> keys()`
+
+无序符号表（链表实现）：
+
+```java
+
+```
+
