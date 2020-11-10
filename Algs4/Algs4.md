@@ -14,7 +14,7 @@
 - `void push(Item item);`
 - `Item pop();`
 
-##### 使用数组实现的下压栈
+#### 使用数组实现的下压栈
 
 ```java
 import edu.princeton.cs.algs4.StdOut;
@@ -87,7 +87,7 @@ public class ResizingArrayStack<Item> implements Iterable<Item> {
 
 
 
-##### 使用链表实现的下压栈
+#### 使用链表实现的下压栈
 
 ```java
 import edu.princeton.cs.algs4.StdOut;
@@ -861,7 +861,7 @@ public class Sort {
 
 ### 2.1.初级排序
 
-##### 冒泡排序
+#### 冒泡排序
 
 慢慢的将当前剩余最大的值交换到相对最后位置，如同气泡向水面上冒一样。时间复杂度$N^2$
 
@@ -877,7 +877,7 @@ public class Sort {
 
 
 
-##### 选择排序
+#### 选择排序
 
 核心思想就是将依次最小的元素放在数组最前面。时间复杂度$N^2$
 
@@ -896,7 +896,7 @@ public class Sort {
 
 
 
-##### 插入排序
+#### 插入排序
 
 核心思想就是将第j个元素插入到数组前j-1个元素的某个恰当位置中。时间复杂度$N^2$
 
@@ -930,7 +930,7 @@ public class Sort {
 
 
 
-##### 希尔排序
+#### 希尔排序
 
 希尔排序的核心思想就是：先对相隔一段间距的元素进行插入排序使得数组部分有序，然后减少间隔量最终变成完全的插入排序，此时达到最终的有序。时间复杂度小于$N^2$，递增序列$1/2(3^k-1)$可以做到$N^{3/2}$
 
@@ -1100,7 +1100,7 @@ public class Sort {
 
 ### 2.3快速排序
 
-##### 普通快速排序
+#### 普通快速排序
 
 ```java
     private static int partition(Comparable[] a, int low, int high) {
@@ -1219,7 +1219,7 @@ public class Sort {
     }
 ```
 
-##### 三切分快速排序
+#### 三切分快速排序
 
 ```java
 	//3取样    
@@ -1278,7 +1278,7 @@ public class Sort {
 - `boolean isEmpty()`
 - `int size()`
 
-##### 最大堆
+#### 最大堆
 
 一个允许动态调整的最大二叉堆：
 
@@ -1379,11 +1379,11 @@ public class MaxPQ<Key extends Comparable<Key>> {
 
 ```
 
-##### 索引优先队列
+#### 索引优先队列
 
 
 
-##### 堆排序
+#### 堆排序
 
 核心思想：先将需要排序的数组构建成为最大堆，然后与最后一个元素进行交换、递减堆大小并重新对根节点做下层操作，重复上述操作直到堆大小变成为0
 
@@ -1539,7 +1539,7 @@ int main(void)
 
 对于符号表（键-值对容器，在C++对应于关联容器std::map）来说，最重要的两个操作为**`void put(Key key,Value val)`和`Value get(Key key) `，分别对应着符号表的插入和搜索操作，其时间复杂度关乎着该容器的好坏。**
 
-##### 无序链表符号表
+#### 无序链表符号表
 
 容器插入操作`put()`时间复杂度：$N$
 
@@ -1635,7 +1635,7 @@ public class SeqSearchST<Key, Value> {
 
 
 
-##### 有序数组符号表
+#### 有序数组符号表
 
 容器插入操作`put()`时间复杂度：$N$
 
@@ -1819,7 +1819,7 @@ public class BinarySearchST<Key extends Comparable<Key>, Value> {
 
 
 
-##### 不同类型符号表对比
+#### 不同类型符号表对比
 
 使用不同数据结构构造符号表（键-值对关联数组）的优缺点：
 
@@ -2084,7 +2084,7 @@ public class BST<Key extends Comparable<Key>, Value> {
 
 
 
-##### 插入操作
+#### 插入操作
 
 在递归前沿着树向下走寻找合适的位置，然后以递归创建了新结点，递归调用返回途中沿着树向上爬时更新结点的计数值
 
@@ -2114,7 +2114,7 @@ public class BST<Key extends Comparable<Key>, Value> {
 
 <img src="image/2020-11-08 111923.png" alt="2020-11-08 111923" style="zoom: 80%;" />
 
-##### 查找操作
+#### 查找操作
 
 类似于插入操作
 
@@ -2138,7 +2138,7 @@ public class BST<Key extends Comparable<Key>, Value> {
 
 
 
-##### 删除操作
+#### 删除操作
 
 *删除最小结点*的关键在于：将待删除结点的右结点接到待删除结点的父结点的左边
 
@@ -2197,7 +2197,7 @@ public class BST<Key extends Comparable<Key>, Value> {
 
 
 
-##### 范围(遍历)操作
+#### 范围(遍历)操作
 
 这里的范围操作关键就是使用中序遍历，将二叉搜索树中的结点按照从小到大的顺序加入到队列之中
 
@@ -2238,7 +2238,7 @@ public class BST<Key extends Comparable<Key>, Value> {
 
 ![2020-11-08 115926](image/2020-11-08 115926.png)
 
-##### 上下取整操作
+#### 上下取整操作
 
 以下取整为例，其关键点在于：若在结点遍历过程中遇到一个比自己小的结点，就先暂时记录它然后在它的右子树中继续查找（试图找到比这个节点更合适的结点）。若找不到就仍然使用这个暂存的点进行返回，否则使用找到的合适点进行返回。
 
@@ -2269,7 +2269,7 @@ public class BST<Key extends Comparable<Key>, Value> {
 
 
 
-##### 排位选择操作
+#### 排位选择操作
 
 选取指定位顺序的键select()方法的关键在于：根据每一个结点中的N成员与欲取结点的位置进行比较，若欲取结点位置大于当前节点的N则到该节点的右结点去寻找（不过欲取结点位置要减去左边的结点数量）；若小于则在左边递归寻找；若相等则返回当前结点。
 
@@ -2317,5 +2317,13 @@ public class BST<Key extends Comparable<Key>, Value> {
 
  ### 3.3平衡查找树
 
-##### 2-3树
+#### 2-3树
+
+
+
+#### 红黑树
+
+红黑树的本质就是通过普通的二叉搜索树来实现2-3树
+
+##### 插入操作
 
