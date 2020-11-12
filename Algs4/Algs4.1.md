@@ -29,6 +29,8 @@
 
 对于符号表（键-值对容器，在C++对应于关联容器std::map）来说，最重要的两个操作为**`void put(Key key,Value val)`和`Value get(Key key) `，分别对应着符号表的插入和搜索操作，其时间复杂度关乎着该容器的好坏。**
 
+
+
 #### 3.1.1  无序链表符号表
 
 容器插入操作`put()`时间复杂度：$N$
@@ -572,6 +574,248 @@ public class BST<Key extends Comparable<Key>, Value> {
 }
 ```
 
+C语言实现：
+
+```c
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+#define MAXLINE 64
+
+struct Node {
+	char str[MAXLINE];
+	int val;
+	struct Node* left, * right;
+};
+
+struct BST {
+	struct Node* root;
+};
+
+
+struct Node* CreateNode(const char* buf, int value) {
+	struct Node* node;
+
+	if ((node = malloc(sizeof(struct Node))) == NULL)
+		return NULL;
+	strcpy(node->str, buf);
+	node->val = value;
+	node->left = NULL;
+	node->right = NULL;
+	return node;
+}
+
+
+void InitBST(struct BST*bst) {
+	bst->root = NULL;
+}
+
+
+void destroy(struct Node* h) {
+	if (h == NULL)return;
+
+	if (h->left)  destroy(h->left);
+	if (h->right) destroy(h->right);
+	free(h);
+}
+
+
+void BSTDestroy(struct BST* bst) {
+	if (bst == NULL)return;
+	destroy(bst->root);
+	bst->root = NULL;
+}
+
+
+//插入操作
+struct Node*insert(struct Node*h,const char*buf,int value){
+	if (h == NULL)
+		return CreateNode(buf, value);
+	
+	int cmp = strcmp(buf, h->str);
+	if (cmp < 0)
+		h->left = insert(h->left, buf, value);
+	else if (cmp > 0)
+		h->right = insert(h->right, buf, value);
+	else
+		h->val = value;
+	return h;
+}
+
+
+void BSTInsert(struct BST* bst, const char* buf, int value) {
+	bst->root = insert(bst->root, buf, value);
+}
+
+
+//查找操作
+int get(const struct Node* h,const char*buf) {
+	int cmp;
+
+	if (h == NULL)return -1;
+	if ((cmp = strcmp(buf, h->str)) < 0)
+		return get(h->left, buf);
+	else if (cmp > 0)
+		return get(h->right, buf);
+	else return h->val;
+}
+
+
+int BSTGet(const struct BST* bst, const char* buf) {
+	if (bst == NULL)return -1;
+	return get(bst->root, buf);
+}
+
+
+//最小值
+struct Node* min(struct Node* h) {
+	if (h == NULL)return NULL;
+	if (h->left != NULL)
+		return min(h->left);
+	else return h;
+}
+
+
+const char* BSTMin(const struct BST* bst) {
+	if (bst == NULL)return NULL;
+	return min(bst->root)->str;
+}
+
+
+//最大值
+struct Node* max(struct Node* h) {
+	if (h == NULL)return NULL;
+	if (h->right != NULL)
+		return max(h->right);
+	else return h;
+}
+
+
+const char* BSTMax(const struct BST* bst) {
+	if (bst == NULL) return NULL;
+	return max(bst->root)->str;
+}
+
+
+//删除最小值
+struct Node* deleteMin(struct Node* h) {
+	struct Node* t;
+
+	if (h == NULL)return NULL;
+	if (h->left != NULL) {
+		h->left = deleteMin(h->left);
+		return h;
+	}
+	else {
+		t = h->right;
+		free(h);
+		return t;
+	}
+}
+
+
+void BSTDeleteMin(struct BST* bst) {
+	if (bst == NULL)return;
+	bst->root = deleteMin(bst->root);
+}
+
+
+//删除最大值
+struct Node* deleteMax(struct Node* h) {
+	struct Node* t;
+
+	if (h == NULL)return NULL;
+	if (h->right != NULL) {
+		h->right = deleteMax(h->right);
+		return h;
+	}
+	else {
+		t = h->left;
+		free(h);
+		return t;
+	}
+}
+
+
+void BSTDeleteMax(struct BST* bst) {
+	if (bst == NULL)return;
+	bst->root = deleteMax(bst->root);
+}
+
+
+//从当前结点的右子树中挑一个最小结点（并从该树中移除，但不是free），
+//其中过程需要调整移除后的右子树
+struct Node* RemoveRightMin(struct Node* h, struct Node** r) {
+	if (h == NULL) { *r = NULL; return NULL; }
+
+	if (h->left != NULL) {
+		h->left = RemoveRightMin(h->left, r);
+		return h;
+	}
+	else {
+		*r = h;
+		return h->right;
+	}
+}
+
+
+//任意删除
+struct Node* delete(struct Node* h, const char* buf) {
+	//t表示替代删除结点的结点指针,right用来表示右子树的根节点（可能跟原来不一样）
+	struct Node* t, * right;
+	int cmp;
+
+	if (h == NULL)return NULL;
+	if ((cmp = strcmp(buf, h->str)) < 0) {
+		h->left = delete(h->left, buf);
+		return h;
+	}
+	else if (cmp > 0) {
+		h->left = delete(h->right, buf);
+		return h;
+	}
+	else {
+		right = RemoveRightMin(h->right, &t);
+		if(t==NULL){//右边根本就没有
+			t = h->left;
+			free(h);
+			return t;
+		}
+		else {
+			t->left = h->left;
+			t->right = right;
+			free(h);
+			return t;
+		}
+	}
+}
+
+
+void BSTDelete(struct BST* bst, const char* buf) {
+	if (bst == NULL)return;
+	bst->root = delete(bst->root, buf);
+}
+
+
+//打印操作（中序）
+void print(const struct Node* h) {
+	if (h == NULL)return;
+
+	if (h->left != NULL)
+		print(h->left);
+	printf("str: %s, value: %d\n", h->str, h->val);
+	if (h->right != NULL)
+		print(h->right);
+}
+
+
+void BSTPrint(const struct BST* bst) {
+	print(bst->root);
+	putchar('\n');
+}
+```
+
 
 
 #### 3.2.1  插入操作
@@ -603,6 +847,8 @@ public class BST<Key extends Comparable<Key>, Value> {
 图示：
 
 <img src="E:/Desktop/Algorithms/Algs4/image/2020-11-08 111923.png" alt="2020-11-08 111923" style="zoom: 80%;" />
+
+
 
 #### 3.2.2  查找操作
 
@@ -715,18 +961,13 @@ public class BST<Key extends Comparable<Key>, Value> {
     public Iterable<Key> keys() {
         return keys(min(), max());
     }
-
-    private Node deleteMin(Node x) {
-        if (x.left == null) return x.right;
-        x.left = deleteMin(x.left);
-        x.N = size(x.left) + size(x.right) + 1;
-        return x;
-    }
 ```
 
 图示：
 
 ![2020-11-08 115926](E:/Desktop/Algorithms/Algs4/image/2020-11-08 115926.png)
+
+
 
 #### 3.2.5 上下取整操作
 
@@ -805,28 +1046,40 @@ public class BST<Key extends Comparable<Key>, Value> {
     }
 ```
 
+
+
  ### 3.3 平衡查找树
 
 #### 3.3.1  2-3树
 
-2-3树指的是由2-结点和3-结点共同构成的二叉树，其中2-结点具有两个指向孩子结点的链接（左孩子比它小，右孩子比它大），而3-结点具有三个指向孩子结点的链接（左孩子比它小，中间孩子键值介于3-结点中两个键之间，右孩子比它大）。***一棵完美平衡的2-3查找树中的所有空链接null到根结点的距离总是相同的，且查找/插入操作总是能够在$logN$时间复杂度内完成***。
+2-3树指的是由2-结点和3-结点共同构成的二叉树，其中2-结点具有两个指向孩子结点的链接（左孩子比它小，右孩子比它大），而3-结点具有三个指向孩子结点的链接（左孩子比它小，中间孩子键值介于3-结点中两个键之间，右孩子比它大）。**一棵完美平衡的2-3查找树中的所有空链接null到根结点的距离总是相同的，且查找/插入操作总是能够在$logN$时间复杂度内完成**。
 
 <img src="image/2020-11-11 100146.png" alt="2020-11-11 100146" style="zoom:80%;" />
 
-##### 3.3.1.1  2-3树的插入操作
 
 
+2-3树的插入操作可以总体分成如下两种情况：
 
+1. 向2-结点进行插入：
 
+   此时的处理很简单，2-结点直接变成3-结点即可。
+
+2. 向3-结点进行插入：
+
+   则操作时会临时产生一个临时的4-结点，该4-结点然后就会分解将中键（中间结点）提出给父结点（此时等效于向其父结点又进行了一次插入操作）。①*若父结点原来是2-结点*，则其结果就如同1）的结果相同（父结点变成了一个3-结点），此时插入操作就到此为止；②*若父结点原来是3-结点*，则父结点也同样的会临时变成一个4-结点，此时该父结点又一次提出一个中间结点给它的父结点...若此递归下去，直到其遇到一个为2-结点的父结点（*一种比较特殊的情况就是若该中间结点向上插入的过程中遇到了根结点*，使得根结点变成了一个临时4-结点，此时该临时4-结点会直接分解成3个2结点，使树增高1层）。
+   
+   <img src="image/2020-11-12 213802.png" alt="2020-11-12 213802" style="zoom:80%;" />
+   
+   
 
 #### 3.3.2  红黑树
 
-***红黑树的本质就是通过普通二叉搜索树来实现完美平衡2-3树***，而2-3树可以保证我们的查找/插入操作维持在$logN$级别
+**红黑树的本质就是通过普通二叉搜索树来实现完美平衡2-3树**，而2-3树可以保证我们的查找和插入操作都维持在$logN$级别
 
 ```java
+import edu.princeton.cs.algs4.BlockFilter;
+import edu.princeton.cs.algs4.Queue;
 import edu.princeton.cs.algs4.StdOut;
-
-import java.util.concurrent.BlockingDeque;
 
 public class RedBlackBST<Key extends Comparable<Key>, Value> {
     private static final boolean RED = true;
@@ -852,7 +1105,6 @@ public class RedBlackBST<Key extends Comparable<Key>, Value> {
     public RedBlackBST() {
     }
 
-    /* 辅助函数 */
     private boolean isRed(Node x) {
         if (x == null) return false;
         return x.color == RED;
@@ -864,6 +1116,7 @@ public class RedBlackBST<Key extends Comparable<Key>, Value> {
         return x.size;
     }
 
+    //左旋
     private Node rotateLeft(Node h) {
         Node x = h.right;
         h.right = x.left;
@@ -876,6 +1129,7 @@ public class RedBlackBST<Key extends Comparable<Key>, Value> {
         return x;
     }
 
+    //右旋
     private Node rotateRight(Node h) {
         Node x = h.left;
         h.left = x.right;
@@ -888,14 +1142,19 @@ public class RedBlackBST<Key extends Comparable<Key>, Value> {
         return x;
     }
 
+    //翻转当前结点和左右孩子结点的颜色
     private void flipColors(Node h) {
         h.color = !h.color;
         h.left.color = !h.left.color;
         h.right.color = !h.right.color;
     }
 
+    /* 从当前结点的右子结点中借一个结点给左子结点，使左子结点
+       变成一个3-结点；或者3者合并成为3-结点 */
     private Node moveRedLeft(Node h) {
         flipColors(h);
+        /* 若右子结点是一个3-结点，则提取一个结点给左子结点
+           使其成为3-结点 */
         if (isRed(h.right.left)) {
             h.right = rotateRight(h.right);
             h = rotateLeft(h);
@@ -904,8 +1163,12 @@ public class RedBlackBST<Key extends Comparable<Key>, Value> {
         return h;
     }
 
+    /* 从当前结点的左子结点中借一个结点给右子结点，使右子结点
+        变得有剩余结点使得删除一个不影响红黑树的平衡 */
     private Node moveRedRight(Node h) {
         flipColors(h);
+        /* 若左子结点是一个3-结点，则提取一个结点给右子结点
+           使其成为3-结点 */
         if (isRed(h.left.left)) {
             h = rotateRight(h);
             flipColors(h);
@@ -913,6 +1176,7 @@ public class RedBlackBST<Key extends Comparable<Key>, Value> {
         return h;
     }
 
+    //在删除后做局部平衡处理
     private Node balance(Node h) {
         if (isRed(h.right))
             h = rotateLeft(h);
@@ -935,6 +1199,7 @@ public class RedBlackBST<Key extends Comparable<Key>, Value> {
             h.right = put(h.right, key, val);
         else h.val = val;
 
+        /* 红黑树比普通二叉查找树多就多在如下部分： */
         if (!isRed(h.left) && isRed(h.right))
             h = rotateLeft(h);
         if (isRed(h.left) && isRed(h.left.left))
@@ -945,14 +1210,14 @@ public class RedBlackBST<Key extends Comparable<Key>, Value> {
         return h;
     }
 
-    private Node get(Node h, Key key) {
+    private Value get(Node h, Key key) {
         while (h != null) {
             int cmp = key.compareTo(h.key);
             if (cmp < 0)
                 h = h.left;
             else if (cmp > 0)
                 h = h.right;
-            else return h;
+            else return h.val;
         }
         return null;
     }
@@ -960,6 +1225,9 @@ public class RedBlackBST<Key extends Comparable<Key>, Value> {
     private Node deleteMin(Node h) {
         if (h.left == null)
             return null;
+
+        /* 左子结点不是3-结点的情况下需要进行moveRedLeft
+            局部调整作业，使得左子结点变成一个3结点 */
         if (!isRed(h.left) && !isRed(h.left.left))
             h = moveRedLeft(h);
         h.left = deleteMin(h.left);
@@ -971,10 +1239,107 @@ public class RedBlackBST<Key extends Comparable<Key>, Value> {
             h = rotateRight(h);
         if (h.right == null)
             return null;
+
+        /* 右子结点不是3-结点的情况下需要进行moveRedRight
+            局部调整作业，使得右子结点变成一个3-结点 */
         if (!isRed(h.right) && !isRed(h.right.left))
             h = moveRedRight(h);
         h.right = deleteMax(h.right);
         return balance(h);
+    }
+
+    private Node delete(Node h, Key key) {
+        //欲删除结点在左子树中
+        if (key.compareTo(h.key) < 0) {
+            if (!isRed(h.left) && !isRed(h.left.left))
+                h = moveRedLeft(h);
+            h.left = delete(h.left, key);
+        }
+        /* 欲删除结点为当前结点或在右子树上。其中最需要注意的是要在前往右边
+           的删除路径上让途径的结点变成向右偏的3-结点（即红链接只存在于父结
+           点和其右子结点之间，而不是父结点和其左子结点之间），这样递归下去
+           方便从无子3-结点中删除一个结点*/
+        else {
+            if (isRed(h.left))
+                h = rotateRight(h);
+            if (key.compareTo(h.key) == 0 && h.right == null)
+                return null;
+            if (!isRed(h.right) && !isRed(h.right.left))
+                h = moveRedRight(h);
+            if (key.compareTo(h.key) == 0) {
+                h.val = get(h.right, min(h.right).key);
+                h.key = min(h.right).key;
+                h.right = deleteMin(h.right);
+            } else h.right = delete(h.right, key);
+        }
+        return balance(h);
+    }
+
+    private void keys(Node h, Queue<Key> queue, Key low, Key high) {
+        if (h == null) return;
+
+        int lcmp = low.compareTo(h.key);
+        int hcmp = high.compareTo(h.key);
+        if (lcmp < 0)
+            keys(h.left, queue, low, high);
+        if (lcmp <= 0 && hcmp >= 0)
+            queue.enqueue(h.key);
+        if (hcmp > 0)
+            keys(h.right, queue, low, high);
+    }
+
+    private Node min(Node h) {
+        if (h.left == null) return h;
+        return min(h.left);
+    }
+
+    private Node max(Node h) {
+        if (h.right == null) return h;
+        return max(h.right);
+    }
+
+    private int rank(Node h, Key key) {
+        if (h == null) return 0;
+
+        int cmp = key.compareTo(h.key);
+        if (cmp < 0)
+            return rank(h.left, key);
+        else if (cmp > 0)
+            return rank(h.right, key) + size(h.left) + 1;
+        else return size(h.left);
+    }
+
+    private Node select(Node h, int k) {
+        if (h == null) return null;
+
+        int t = size(h.left);
+        if (t > k)
+            return select(h.left, k);
+        else if (t < k)
+            return select(h.right, k - t - 1);
+        else return h;
+    }
+
+    private Node floor(Node h, Key key) {
+        if (h == null) return null;
+
+        int cmp = key.compareTo(h.key);
+        if (cmp < 0)
+            return floor(h.left, key);
+        Node t = floor(h.right, key);
+        if (t != null) return t;
+        return h;
+    }
+
+    private Node ceiling(Node h, Key key) {
+        if (h == null) return null;
+
+        int cmp = key.compareTo(h.key);
+        if (cmp > 0)
+            return ceiling(h.right, key);
+        Node t = ceiling(h.left, key);
+        if (t != null) return t;
+        return h;
     }
 
     public boolean isEmpty() {
@@ -985,14 +1350,47 @@ public class RedBlackBST<Key extends Comparable<Key>, Value> {
         return size(root);
     }
 
+    public int size(Key low, Key high) {
+        if (low.compareTo(high) >= 0)
+            return 0;
+        else if (!contains(high))
+            return rank(high) - rank(low);
+        else
+            return rank(high) - rank(low) + 1;
+    }
+
     public boolean contains(Key key) {
         return get(key) != null;
+    }
+
+    public int rank(Key key) {
+        if (!contains(key))
+            throw new RuntimeException("No this key");
+        return rank(root, key);
+    }
+
+    public Key select(int k) {
+        Node t = select(root, k);
+        if (t == null) return null;
+        return t.key;
+    }
+
+    public Key floor(Key key) {
+        Node t = floor(root, key);
+        if (t == null) return null;
+        return t.key;
+    }
+
+    public Key ceiling(Key key) {
+        Node t = ceiling(root, key);
+        if (t == null) return null;
+        return t.key;
     }
 
     public Value get(Key key) {
         if (root == null)
             return null;
-        return get(root, key).val;
+        return get(root, key);
     }
 
     public void put(Key key, Value val) {
@@ -1014,6 +1412,33 @@ public class RedBlackBST<Key extends Comparable<Key>, Value> {
         if (isEmpty()) root.color = BLACK;
     }
 
+    public void delete(Key key) {
+        if (!isRed(root.left) && !isRed(root.right))
+            root.color = RED;
+        root = delete(root, key);
+        if (!isEmpty()) root.color = BLACK;
+    }
+
+    public Iterable<Key> keys(Key low, Key high) {
+        Queue<Key> queue = new Queue<Key>();
+        keys(root, queue, low, high);
+        return queue;
+    }
+
+    public Iterable<Key> keys() {
+        return keys(min(), max());
+    }
+
+    public Key min() {
+        if (root == null) return null;
+        return min(root).key;
+    }
+
+    public Key max() {
+        if (root == null) return null;
+        return max(root).key;
+    }
+
     public static void main(String[] args) {
         RedBlackBST<String, Integer> redBlackBST =
                 new RedBlackBST<String, Integer>();
@@ -1023,21 +1448,19 @@ public class RedBlackBST<Key extends Comparable<Key>, Value> {
         redBlackBST.put("c", 5);
         redBlackBST.put("d", 24);
         redBlackBST.put("h", 2);
-        StdOut.println("tree size: " + redBlackBST.size());
-        StdOut.println("c's value: " + redBlackBST.get("c"));
-        redBlackBST.deleteMin();
-        StdOut.println("current tree size: " + redBlackBST.size());
-        if (redBlackBST.contains("b"))
-            StdOut.println("b");
-        if (redBlackBST.contains("c"))
-            StdOut.println("c");
-        if (redBlackBST.contains("d"))
-            StdOut.println("d");
+        for (String str : redBlackBST.keys())
+            StdOut.print(str + " ");
+        StdOut.println();
+
+        StdOut.println("ceiling of k: " + redBlackBST.ceiling("k"));
+        StdOut.println("floor of k: " + redBlackBST.floor("k"));
+
+        redBlackBST.delete("d");
         redBlackBST.deleteMin();
         redBlackBST.deleteMax();
-        redBlackBST.deleteMax();
-        StdOut.println("current tree size: " + redBlackBST.size());
-        StdOut.println("current c: " + redBlackBST.get("c"));
+        for (String str : redBlackBST.keys())
+            StdOut.print(str + " ");
+        StdOut.println();
     }
 }
 ```

@@ -1508,3 +1508,1076 @@ int main(void)
 
 
 
+## 3. 查找
+
+### 3.1 符号表
+
+无序符号表API（也同样是有序符号表共同拥有的）：`public class ST<Key,Value>`
+
+- `ST()`
+- `void put(Key key,Value value)`
+- `Value get(Key key)`
+- `void delete(Key key)`
+- `boolean contains(Key key)`
+- `boolean isEmpty()`
+- `int size()`
+- `Iterable<Key> keys()`
+
+有序符号表增加的API：
+
+- `Key min()`
+- `Key max()`
+- `Key floor(Key key)`
+- `Key ceiling(Key key)`
+- `int rank(Key key)`
+- `Key select(int k)`
+- `void deleteMin()`
+- `void deleteMax()`
+- `int size(Key lo,Key hi)`
+- `Iterable<Key> keys(Key lo,Key hi)`
+- `Iterable<Key> keys()`
+
+对于符号表（键-值对容器，在C++对应于关联容器std::map）来说，最重要的两个操作为**`void put(Key key,Value val)`和`Value get(Key key) `，分别对应着符号表的插入和搜索操作，其时间复杂度关乎着该容器的好坏。**
+
+
+
+#### 3.1.1  无序链表符号表
+
+容器插入操作`put()`时间复杂度：$N$
+
+容器查找操作`get()`时间复杂度：$N$
+
+```java
+import edu.princeton.cs.algs4.Queue;
+import edu.princeton.cs.algs4.StdOut;
+
+import java.util.Collection;
+import java.util.Iterator;
+
+public class SeqSearchST<Key, Value> {
+    private Node first;
+    private int N = 0;
+
+    private class Node {
+        Key key;
+        Value val;
+        Node next;
+
+        public Node(Key key, Value val, Node next) {
+            this.key = key;
+            this.val = val;
+            this.next = next;
+        }
+    }
+
+    public SeqSearchST() {
+    }
+
+    //获取指定键key对应的值val
+    public Value get(Key key) {
+        for (Node x = first; x != null; x = x.next) {
+            if (key.equals(x.key))
+                return x.val;
+        }
+        return null;
+    }
+
+    //添加键值对
+    public void put(Key key, Value val) {
+        for (Node x = first; x != null; x = x.next) {
+            if (key.equals(x.key)) {
+                x.val = val;
+                return;
+            }
+        }
+        first = new Node(key, val, first);
+        N++;
+    }
+
+    public void delete(Key key) {
+        put(key, null);
+        N--;
+    }
+
+    public boolean contains(Key key) {
+        return get(key) != null;
+    }
+
+    public boolean isEmpty() {
+        return N == 0;
+    }
+
+    public int size() {
+        return N;
+    }
+
+    /* Iterable指的是一个可迭代的容器（它必然实现了一个iterator()成员）
+    	，而Iterator是作用于其上的迭代器 */
+    public Iterable<Key> keys() {
+        Queue<Key> queue = new Queue<Key>();
+        for (Node x = first; x != null; x = x.next)
+            queue.enqueue(x.key);
+        return queue;
+    }
+
+    public static void main(String[] args) {
+        SeqSearchST<String, Integer> seqSearchST =
+                new SeqSearchST<String, Integer>();
+
+        seqSearchST.put("hello", 32);
+        seqSearchST.put("show", 3);
+        seqSearchST.put("world", 5);
+        seqSearchST.put("code", 6);
+        for (String key : seqSearchST.keys())
+            StdOut.println(key + " " + seqSearchST.get(key));
+        StdOut.println("size: " + seqSearchST.size());
+    }
+}
+```
+
+
+
+#### 3.1.2  有序数组符号表
+
+容器插入操作`put()`时间复杂度：$N$
+
+容器查找操作`get()`时间复杂度：$logN$
+
+```java
+import edu.princeton.cs.algs4.Queue;
+import edu.princeton.cs.algs4.StdOut;
+
+public class BinarySearchST<Key extends Comparable<Key>, Value> {
+    private Key[] keys;
+    private Value[] vals;
+    private int capacity = 0;
+    private int N = 0;
+
+    //重新调整符号表容器大小
+    private void resize(int capacity) {
+        this.capacity = capacity;
+        Key[] newkeys = (Key[]) new Comparable[capacity];
+        Value[] newvals = (Value[]) new Object[capacity];
+        for (int i = 0; i < N; ++i) {
+            newkeys[i] = keys[i];
+            newvals[i] = vals[i];
+        }
+        keys = newkeys;
+        vals = newvals;
+    }
+
+    public BinarySearchST(int capacity) {
+        this.capacity = capacity;
+        this.keys = (Key[]) new Comparable[capacity];
+        this.vals = (Value[]) new Object[capacity];
+    }
+
+    public boolean contains(Key key) {
+        return get(key) != null;
+    }
+
+    public boolean isEmpty() {
+        return N == 0;
+    }
+
+    public int size() {
+        return N;
+    }
+
+    //返回小于等于指定键key的键的数量
+    public int rank(Key key) {
+        int low = 0, high = N - 1;
+        while (low <= high) {
+            int mid = low + (high - low) / 2;
+            int cmp = key.compareTo(keys[mid]);
+            if (cmp < 0) high = mid - 1;
+            else if (cmp > 0) low = mid + 1;
+            else return mid;
+        }
+        return low;
+    }
+
+    public Value get(Key key) {
+        if (isEmpty()) return null;
+        int i = rank(key);
+        if (i < N && keys[i].compareTo(key) == 0)
+            return vals[i];
+        return null;
+    }
+
+    public void put(Key key, Value val) {
+        int i = rank(key);
+        if (i < N && keys[i].compareTo(key) == 0) {
+            vals[i] = val;
+            return;
+        }
+        if (N == capacity)
+            resize(capacity * 2);
+        for (int j = N; j > i; --j) {
+            keys[j] = keys[j - 1];
+            vals[j] = vals[j - 1];
+        }
+        keys[i] = key;
+        vals[i] = val;
+        N++;
+    }
+
+    public void delete(Key key) {
+        if (isEmpty()) return;
+        int i = rank(key);
+        if (i < N && keys[i].compareTo(key) == 0) {
+            for (int j = i; j < N - 1; j++) {
+                keys[j] = keys[j + 1];
+                vals[j] = vals[j + 1];
+            }
+            keys[N - 1] = null;
+            vals[N - 1] = null;
+            N--;
+        }
+    }
+
+    public Key min() {
+        if (isEmpty()) return null;
+        return keys[0];
+    }
+
+    public Key max() {
+        if (isEmpty()) return null;
+        return keys[N - 1];
+    }
+
+    public void deleteMin() {
+        delete(min());
+    }
+
+    public void deleteMax() {
+        delete(max());
+    }
+
+    //取大于等于指定键的键
+    public Key ceiling(Key key) {
+        return keys[rank(key)];
+    }
+
+    //取小于等于指定键的键
+    public Key floor(Key key) {
+        if (isEmpty()) return null;
+        int i = rank(key);
+        if (i < N) {
+            if (keys[i].compareTo(key) == 0)
+                return keys[i];
+            return keys[i - 1];
+        }
+        return null;
+    }
+
+    public Key select(int k) {
+        if (k < 0 || k >= size()) return null;
+        return keys[k];
+    }
+
+    public int size(Key low, Key high) {
+        if (high.compareTo(low) < 0)
+            return 0;
+        else if (contains(high))
+            return rank(high) - rank(low) + 1;
+        else
+            return rank(high) - rank(low);
+    }
+
+    //返回指定键范围的键集合容器，该容器提供了一个iterator()方法
+    public Iterable<Key> keys(Key low, Key high) {
+        Queue<Key> q = new Queue<Key>();
+        for (int i = rank(low); i < rank(high); ++i)
+            q.enqueue(keys[i]);
+        if (contains(high))
+            q.enqueue(keys[rank(high)]);
+        return q;
+    }
+
+    public Iterable<Key> keys() {
+        return keys(min(), max());
+    }
+
+    public static void main(String[] args) {
+        BinarySearchST<String, Integer> binarySearchST =
+                new BinarySearchST<String, Integer>(10);
+
+        binarySearchST.put("a", 32);
+        binarySearchST.put("b", 5);
+        binarySearchST.put("e", 43);
+        binarySearchST.put("d", 64);
+        for (String str : binarySearchST.keys())
+            StdOut.println(str + " " + binarySearchST.get(str));
+        binarySearchST.delete("a");
+        StdOut.println(binarySearchST.size());
+        StdOut.println(binarySearchST.min());
+        StdOut.println(binarySearchST.max());
+        StdOut.println(binarySearchST.floor("c"));
+        StdOut.println(binarySearchST.ceiling("c"));
+    }
+}
+```
+
+
+
+#### 3.1.3  不同类型符号表对比
+
+使用不同数据结构构造符号表（键-值对关联数组）的优缺点：
+
+|    使用的数据结构    |                   实现                    | 插入时间复杂度 | 查找时间复杂度 |                        优点                        |                             缺点                             |
+| :------------------: | :---------------------------------------: | :------------: | :------------: | :------------------------------------------------: | :----------------------------------------------------------: |
+|   链表（顺序查找）   |            SequentialSearchST             |      $N$       |      $N$       |                   适用于小型问题                   |                   当问题规模变大时处理很慢                   |
+| 有序数组（二分查找） |              BinarySearchST               |      $N$       |     $logN$     | 最优的查找效率和空间需求，能够进行有序性相关的操作 |                         插入操作很慢                         |
+|      二叉查找树      |                    BST                    |   $logN$~$N$   |   $logN$~$N$   |         实现简单，能够进行有序性相关的操作         |            没有性能上界的保证，链接需要额外的空间            |
+|   平衡二叉树查找树   |                RedBlackBST                |     $logN$     |     $logN$     |   最优的查找和插入效率，能够进行有序性相关的操作   |                      链接需要额外的空间                      |
+|        散列表        | SeparateChain HashST LinearProbing HashST |                |                |         能够快速地查找和插入常见类型地数据         | 需要计算每种类型数据地散列，无法进行有序性线管地操作，链接和空节点需要额外的空间 |
+
+
+
+### 3.2 二叉查找树
+
+容器插入操作`put()`时间复杂度：$logN$~$N$
+
+容器查找操作`get()`时间复杂度：$logN$~$N$
+
+```java
+import edu.princeton.cs.algs4.Queue;
+import edu.princeton.cs.algs4.StdOut;
+
+public class BST<Key extends Comparable<Key>, Value> {
+    private Node root;
+
+    //二叉树节点私有类定义
+    private class Node {
+        private Key key;
+        private Value val;
+        private Node left, right;
+        private int N;
+
+        public Node(Key key, Value val, int N) {
+            this.left = this.right = null;
+            this.key = key;
+            this.val = val;
+            this.N = N;
+        }
+    }
+
+    private int size(Node x) {
+        if (x == null) return 0;
+        return x.N;
+    }
+
+    public int size() {
+        return size(root);
+    }
+
+    public boolean contains(Key key) {
+        return get(key) != null;
+    }
+
+    public boolean isEmpty() {
+        return size() == 0;
+    }
+
+    private Value get(Node x, Key key) {
+        if (x == null) return null;
+
+        int cmp = key.compareTo(x.key);
+        if (cmp < 0)
+            return get(x.left, key);
+        else if (cmp > 0)
+            return get(x.right, key);
+        else return x.val;
+    }
+
+    //在二叉搜索树中查找指定键的元素
+    public Value get(Key key) {
+        return get(root, key);
+    }
+
+    private Node put(Node x, Key key, Value val) {
+        if (x == null) return new Node(key, val, 1);
+
+        int cmp = key.compareTo(x.key);
+        if (cmp < 0)
+            x.left = put(x.left, key, val);
+        else if (cmp > 0)
+            x.right = put(x.right, key, val);
+        else x.val = val;
+        //对于当前节点而言，更新N没什么用，但是对其父节点及其祖先节点是必要的
+//        x.N=size(x.left)+size(x.right)+1;
+        x.N++;
+        return x;
+    }
+
+    //向二叉搜索树元素插入操作
+    public void put(Key key, Value val) {
+        root = put(root, key, val);
+    }
+
+    private Node min(Node x) {
+        if (x.left == null) return x;
+        return min(x.left);
+    }
+
+    public Key min() {
+        return min(root).key;
+    }
+
+    private Node max(Node x) {
+        if (x.right == null) return x;
+        return max(x.right);
+    }
+
+    public Key max() {
+        return max(root).key;
+    }
+
+    //下取整
+    private Node floor(Node x, Key key) {
+        if (x == null) return null;
+
+        int cmp = key.compareTo(x.key);
+        if (cmp == 0) return x;
+        else if (cmp < 0) //若key小于当前节点的key，则继续到该节点的左子树去找
+            return floor(x.left, key);
+        Node t = floor(x.right, key);
+        if (t != null) return t;
+        else return x;
+    }
+
+    public Key floor(Key key) {
+        Node t = floor(root, key);
+        if (t == null) return null;
+        else return t.key;
+    }
+
+    //上取整
+    private Node ceiling(Node x, Key key) {
+        if (x == null) return null;
+
+        int cmp = key.compareTo(x.key);
+        if (cmp == 0) return x;
+        else if (cmp > 0)
+            return ceiling(x.right, key);
+        Node t = ceiling(x.left, key);
+        if (t != null) return t;
+        else return x;
+    }
+
+    public Key ceiling(Key key) {
+        Node t = ceiling(root, key);
+        if (t == null) return null;
+        return t.key;
+    }
+
+    //选取排位顺序的键
+    private Node select(Node x, int k) {
+        if (x == null) return null;
+
+        int t = size(x.left);
+        if (t > k) return select(x.left, k);
+        else if (t < k) return select(x.right, k - t - 1);
+        else return x;
+    }
+
+    public Key select(int k) {
+        Node t = select(root, k);
+        if (t == null) return null;
+        else return t.key;
+    }
+
+    //获取指定键的位置
+    private int rank(Node x, Key key) {
+        if (x == null) return 0;
+
+        int cmp = key.compareTo(x.key);
+        if (cmp < 0)
+            return rank(x.left, key);
+        else if (cmp > 0)
+            return size(x.left) + 1 + rank(x.right, key);
+        else return size(x.left);
+    }
+
+    public int rank(Key key) {
+        return rank(root, key);
+    }
+
+    private void keys(Node x, Queue<Key> queue, Key low, Key high) {
+        if (x == null) return;
+
+        int lcomp = low.compareTo(x.key);
+        int hcomp = high.compareTo(x.key);
+        if (lcomp < 0) keys(x.left, queue, low, high);//先将左子树中符合要求的元素加入queue中
+        if (lcomp <= 0 && hcomp >= 0) queue.enqueue(x.key);//再将自己也加入到queue中
+        if (hcomp > 0) keys(x.right, queue, low, high);//最后将右子树中符合要求的元素加入到queue中
+    }
+
+    //返回存储指定范围键的可迭代容器
+    public Iterable<Key> keys(Key low, Key high) {
+        Queue<Key> queue = new Queue<Key>();
+        keys(root, queue, low, high);
+        return queue;
+    }
+
+    public Iterable<Key> keys() {
+        return keys(min(), max());
+    }
+
+    private Node deleteMin(Node x) {
+        if (x.left == null) return x.right;
+        x.left = deleteMin(x.left);
+        x.N = size(x.left) + size(x.right) + 1;
+        return x;
+    }
+
+    public void deleteMin() {
+        root = deleteMin(root);
+    }
+
+    private Node deleteMax(Node x) {
+        if (x.right == null) return x.left;
+        x.right = deleteMax(x.right);
+        x.N = size(x.left) + size(x.right) + 1;
+        return x;
+    }
+
+    public void deleteMax() {
+        root = deleteMax(root);
+    }
+
+    private Node delete(Node x, Key key) {
+        if (x == null) return null;
+
+        int cmp = key.compareTo(x.key);
+        if (cmp < 0)
+            x.left = delete(x.left, key);
+        else if (cmp > 0)
+            x.right = delete(x.right, key);
+        else {
+            //待删结点只有一个子树
+            if (x.right == null) return x.left;
+            else if (x.left == null) return x.right;
+            Node t = x;//保存待删结点
+            x = min(x.left);//获取待删结点右子树最小结点引用x
+            x.right = deleteMin(t.right);//将待删结点右子树最小结点删除，并将剩余部分挂载到x的右边
+            x.left = t.left;//待删结点的左子树挂在新结点的左边
+        }
+        return x;
+    }
+
+    public void delete(Key key) {
+        root = delete(root, key);
+    }
+
+    private void show(Node x) {
+        if (x == null) return;
+        show(x.left);
+        StdOut.println(x.key);
+        show(x.right);
+    }
+
+    public void show() {
+        show(root);
+    }
+}
+```
+
+C语言实现：
+
+```c
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+#define MAXLINE 64
+
+struct Node {
+	char str[MAXLINE];
+	int val;
+	struct Node* left, * right;
+};
+
+struct BST {
+	struct Node* root;
+};
+
+
+struct Node* CreateNode(const char* buf, int value) {
+	struct Node* node;
+
+	if ((node = malloc(sizeof(struct Node))) == NULL)
+		return NULL;
+	strcpy(node->str, buf);
+	node->val = value;
+	node->left = NULL;
+	node->right = NULL;
+	return node;
+}
+
+
+void InitBST(struct BST*bst) {
+	bst->root = NULL;
+}
+
+
+void destroy(struct Node* h) {
+	if (h == NULL)return;
+
+	if (h->left)  destroy(h->left);
+	if (h->right) destroy(h->right);
+	free(h);
+}
+
+
+void BSTDestroy(struct BST* bst) {
+	if (bst == NULL)return;
+	destroy(bst->root);
+	bst->root = NULL;
+}
+
+
+//插入操作
+struct Node*insert(struct Node*h,const char*buf,int value){
+	if (h == NULL)
+		return CreateNode(buf, value);
+	
+	int cmp = strcmp(buf, h->str);
+	if (cmp < 0)
+		h->left = insert(h->left, buf, value);
+	else if (cmp > 0)
+		h->right = insert(h->right, buf, value);
+	else
+		h->val = value;
+	return h;
+}
+
+
+void BSTInsert(struct BST* bst, const char* buf, int value) {
+	bst->root = insert(bst->root, buf, value);
+}
+
+
+//查找操作
+int get(const struct Node* h,const char*buf) {
+	int cmp;
+
+	if (h == NULL)return -1;
+	if ((cmp = strcmp(buf, h->str)) < 0)
+		return get(h->left, buf);
+	else if (cmp > 0)
+		return get(h->right, buf);
+	else return h->val;
+}
+
+
+int BSTGet(const struct BST* bst, const char* buf) {
+	if (bst == NULL)return -1;
+	return get(bst->root, buf);
+}
+
+
+//最小值
+struct Node* min(struct Node* h) {
+	if (h == NULL)return NULL;
+	if (h->left != NULL)
+		return min(h->left);
+	else return h;
+}
+
+
+const char* BSTMin(const struct BST* bst) {
+	if (bst == NULL)return NULL;
+	return min(bst->root)->str;
+}
+
+
+//最大值
+struct Node* max(struct Node* h) {
+	if (h == NULL)return NULL;
+	if (h->right != NULL)
+		return max(h->right);
+	else return h;
+}
+
+
+const char* BSTMax(const struct BST* bst) {
+	if (bst == NULL) return NULL;
+	return max(bst->root)->str;
+}
+
+
+//删除最小值
+struct Node* deleteMin(struct Node* h) {
+	struct Node* t;
+
+	if (h == NULL)return NULL;
+	if (h->left != NULL) {
+		h->left = deleteMin(h->left);
+		return h;
+	}
+	else {
+		t = h->right;
+		free(h);
+		return t;
+	}
+}
+
+
+void BSTDeleteMin(struct BST* bst) {
+	if (bst == NULL)return;
+	bst->root = deleteMin(bst->root);
+}
+
+
+//删除最大值
+struct Node* deleteMax(struct Node* h) {
+	struct Node* t;
+
+	if (h == NULL)return NULL;
+	if (h->right != NULL) {
+		h->right = deleteMax(h->right);
+		return h;
+	}
+	else {
+		t = h->left;
+		free(h);
+		return t;
+	}
+}
+
+
+void BSTDeleteMax(struct BST* bst) {
+	if (bst == NULL)return;
+	bst->root = deleteMax(bst->root);
+}
+
+
+//从当前结点的右子树中挑一个最小结点（并从该树中移除，但不是free），
+//其中过程需要调整移除后的右子树
+struct Node* RemoveRightMin(struct Node* h, struct Node** r) {
+	if (h == NULL) { *r = NULL; return NULL; }
+
+	if (h->left != NULL) {
+		h->left = RemoveRightMin(h->left, r);
+		return h;
+	}
+	else {
+		*r = h;
+		return h->right;
+	}
+}
+
+
+//任意删除
+struct Node* delete(struct Node* h, const char* buf) {
+	//t表示替代删除结点的结点指针,right用来表示右子树的根节点（可能跟原来不一样）
+	struct Node* t, * right;
+	int cmp;
+
+	if (h == NULL)return NULL;
+	if ((cmp = strcmp(buf, h->str)) < 0) {
+		h->left = delete(h->left, buf);
+		return h;
+	}
+	else if (cmp > 0) {
+		h->left = delete(h->right, buf);
+		return h;
+	}
+	else {
+		right = RemoveRightMin(h->right, &t);
+		if(t==NULL){//右边根本就没有
+			t = h->left;
+			free(h);
+			return t;
+		}
+		else {
+			t->left = h->left;
+			t->right = right;
+			free(h);
+			return t;
+		}
+	}
+}
+
+
+void BSTDelete(struct BST* bst, const char* buf) {
+	if (bst == NULL)return;
+	bst->root = delete(bst->root, buf);
+}
+
+
+//打印操作（中序）
+void print(const struct Node* h) {
+	if (h == NULL)return;
+
+	if (h->left != NULL)
+		print(h->left);
+	printf("str: %s, value: %d\n", h->str, h->val);
+	if (h->right != NULL)
+		print(h->right);
+}
+
+
+void BSTPrint(const struct BST* bst) {
+	print(bst->root);
+	putchar('\n');
+}
+```
+
+
+
+#### 3.2.1  插入操作
+
+在递归前沿着树向下走寻找合适的位置，然后以递归创建了新结点，递归调用返回途中沿着树向上爬时更新结点的计数值
+
+```java
+    private Node put(Node x, Key key, Value val) {
+        if (x == null) return new Node(key, val, 1);
+
+        int cmp = key.compareTo(x.key);
+        if (cmp < 0)
+            x.left = put(x.left, key, val);
+        else if (cmp > 0)
+            x.right = put(x.right, key, val);
+        else x.val = val;
+        //对于当前节点而言，更新N没什么用，但是对其父节点及其祖先节点是必要的
+//        x.N=size(x.left)+size(x.right)+1;
+        x.N++;
+        return x;
+    }
+
+    //向二叉搜索树元素插入操作
+    public void put(Key key, Value val) {
+        root = put(root, key, val);
+    }
+```
+
+图示：
+
+<img src="E:/Desktop/Algorithms/Algs4/image/2020-11-08 111923.png" alt="2020-11-08 111923" style="zoom: 80%;" />
+
+
+
+#### 3.2.2  查找操作
+
+类似于插入操作
+
+```java
+    private Value get(Node x, Key key) {
+        if (x == null) return null;
+
+        int cmp = key.compareTo(x.key);
+        if (cmp < 0)
+            return get(x.left, key);
+        else if (cmp > 0)
+            return get(x.right, key);
+        else return x.val;
+    }
+
+    //在二叉搜索树中查找指定键的元素
+    public Value get(Key key) {
+        return get(root, key);
+    }
+```
+
+
+
+#### 3.2.3  删除操作
+
+*删除最小结点*的关键在于：将待删除结点的右结点接到待删除结点的父结点的左边
+
+```java
+    private Node deleteMin(Node x) {
+        if (x.left == null) return x.right;
+        x.left = deleteMin(x.left);
+        x.N = size(x.left) + size(x.right) + 1;
+        return x;
+    }
+
+	public void deleteMin() {
+        root = deleteMin(root);
+    }
+```
+
+图示：
+
+<img src="E:/Desktop/Algorithms/Algs4/image/2020-11-08 112439.png" alt="2020-11-08 112439" style="zoom:80%;" />
+
+*删除任意结点*的关键在于：`区分只有一个或者无子树的结点（可以看作是像deleteMin()一样的操作）和左右子树同时存在的结点`。无子树或者只有一个子树的结点只要将左子树（若存在）或者右子树接到待删结点的父结点的左/右边。而**左右子树同时存在的结点，需要在删除时暂时记录待删结点的引用，然后取出待删结点右子树中的最小结点用其来替代待删结点（需要将其执行deleteMin()操作），然后将待删结点的左右子树挂在该替代节点的左右两边。**
+
+```java
+    private Node delete(Node x, Key key) {
+        if (x == null) return null;
+
+        int cmp = key.compareTo(x.key);
+        if (cmp < 0)
+            x.left = delete(x.left, key);
+        else if (cmp > 0)
+            x.right = delete(x.right, key);
+        else {
+            //待删结点只有一个子树
+            if (x.right == null) return x.left;
+            else if (x.left == null) return x.right;
+            //保存待删结点
+            Node t = x;
+            //获取待删结点右子树最小结点引用x
+            x = min(x.left);
+            //将待删结点右子树最小结点删除，并将剩余部分挂载到x的右边
+            x.right = deleteMin(t.right);
+            //待删结点的左子树挂在新结点的左边
+            x.left = t.left;
+        }
+        return x;
+    }
+
+    public void delete(Key key) {
+        root = delete(root, key);
+    }
+```
+
+图示：
+
+<img src="E:/Desktop/Algorithms/Algs4/image/2020-11-08 113310.png" alt="2020-11-08 113310" style="zoom:80%;" />
+
+
+
+#### 3.2.4  范围(遍历)操作
+
+这里的范围操作关键就是使用中序遍历，将二叉搜索树中的结点按照从小到大的顺序加入到队列之中
+
+```java
+    private void keys(Node x, Queue<Key> queue, Key low, Key high) {
+        if (x == null) return;
+
+        int lcomp = low.compareTo(x.key);
+        int hcomp = high.compareTo(x.key);
+        //先将左子树中符合要求的元素加入queue中
+        if (lcomp < 0) keys(x.left, queue, low, high);
+        //再将自己也加入到queue中
+        if (lcomp <= 0 && hcomp >= 0) queue.enqueue(x.key);
+        //最后将右子树中符合要求的元素加入到queue中
+        if (hcomp > 0) keys(x.right, queue, low, high);
+    }
+
+    //返回存储指定范围键的可迭代容器
+    public Iterable<Key> keys(Key low, Key high) {
+        Queue<Key> queue = new Queue<Key>();
+        keys(root, queue, low, high);
+        return queue;
+    }
+
+    public Iterable<Key> keys() {
+        return keys(min(), max());
+    }
+```
+
+图示：
+
+![2020-11-08 115926](E:/Desktop/Algorithms/Algs4/image/2020-11-08 115926.png)
+
+
+
+#### 3.2.5 上下取整操作
+
+以下取整为例，其关键点在于：若在结点遍历过程中遇到一个比自己小的结点，就先暂时记录它然后在它的右子树中继续查找（试图找到比这个节点更合适的结点）。若找不到就仍然使用这个暂存的点进行返回，否则使用找到的合适点进行返回。
+
+```java
+    //下取整
+    private Node floor(Node x, Key key) {
+        if (x == null) return null;
+
+        int cmp = key.compareTo(x.key);
+        if (cmp == 0) return x;
+        else if (cmp < 0) //若key小于当前节点的key，则继续到该节点的左子树去找
+            return floor(x.left, key);
+        Node t = floor(x.right, key);
+        if (t != null) return t;
+        else return x;
+    }
+
+    public Key floor(Key key) {
+        Node t = floor(root, key);
+        if (t == null) return null;
+        else return t.key;
+    }
+```
+
+图示：
+
+<img src="E:/Desktop/Algorithms/Algs4/image/2020-11-08 120041.png" alt="2020-11-08 120041" style="zoom:80%;" />
+
+
+
+#### 3.2.6  排位选择操作
+
+选取指定位顺序的键select()方法的关键在于：根据每一个结点中的N成员与欲取结点的位置进行比较，若欲取结点位置大于当前节点的N则到该节点的右结点去寻找（不过欲取结点位置要减去左边的结点数量）；若小于则在左边递归寻找；若相等则返回当前结点。
+
+```java
+    //选取排位顺序的键
+    private Node select(Node x, int k) {
+        if (x == null) return null;
+
+        int t = size(x.left);
+        if (t > k) return select(x.left, k);
+        else if (t < k) return select(x.right, k - t - 1);
+        else return x;
+    }
+
+    public Key select(int k) {
+        Node t = select(root, k);
+        if (t == null) return null;
+        else return t.key;
+    }
+```
+
+图示：
+
+<img src="E:/Desktop/Algorithms/Algs4/image/2020-11-08 120703.png" alt="2020-11-08 120703" style="zoom:80%;" />
+
+而返回指定键位置的rank()方法，则很容易用size()方法递归计算出来
+
+```java
+    //获取指定键的位置
+    private int rank(Node x, Key key) {
+        if (x == null) return 0;
+
+        int cmp = key.compareTo(x.key);
+        if (cmp < 0)
+            return rank(x.left, key);
+        else if (cmp > 0)
+            return size(x.left) + 1 + rank(x.right, key);
+        else return size(x.left);
+    }
+
+    public int rank(Key key) {
+        return rank(root, key);
+    }
+```
+
+
+
+ ### 3.3 平衡查找树
+
+#### 3.3.1  2-3树
+
+2-3树指的是由2-结点和3-结点共同构成的二叉树，其中2-结点具有两个指向孩子结点的链接（左孩子比它小，右孩子比它大），而3-结点具有三个指向孩子结点的链接（左孩子比它小，中间孩子键值介于3-结点中两个键之间，右孩子比它大）。**一棵完美平衡的2-3查找树中的所有空链接null到根结点的距离总是相同的，且查找/插入操作总是能够在$logN$时间复杂度内完成**。
+
+<img src="image/2020-11-11 100146.png" alt="2020-11-11 100146" style="zoom:80%;" />
+
+
+
+**2-3树的插入操作**可以总体分成如下两种情况：
+
+1. 向2-结点进行插入：
+
+   此时的处理很简单，2-结点直接变成3-结点即可。
+
+2. 向3-结点进行插入：
+
+   则操作时会临时产生一个临时的4-结点，该4-结点然后就会分解将中键（中间结点）提出给父结点（此时等效于向其父结点又进行了一次插入操作）。①*若父结点原来是2-结点*，则其结果就如同1）的结果相同（父结点变成了一个3-结点），此时插入操作就到此为止；②*若父结点原来是3-结点*，则父结点也同样的会临时变成一个4-结点，此时该父结点又一次提出一个中间结点给它的父结点...若此递归下去，直到其遇到一个为2-结点的父结点（*一种比较特殊的情况就是若该中间结点向上插入的过程中遇到了根结点*，使得根结点变成了一个临时4-结点，此时该临时4-结点会直接分解成3个2结点，使树增高1层）。
+
+   <img src="image/2020-11-12 213802.png" alt="2020-11-12 213802" style="zoom:80%;" />
+
+   正是该插入操作使得后续的查找操作和插入操作维持在了$logN$的水平
