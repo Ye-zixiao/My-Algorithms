@@ -321,7 +321,7 @@ public class BinarySearchST<Key extends Comparable<Key>, Value> {
 | 有序数组（二分查找） |              BinarySearchST               |      $N$       |     $logN$     | 最优的查找效率和空间需求，能够进行有序性相关的操作 |                         插入操作很慢                         |
 |      二叉查找树      |                    BST                    |   $logN$~$N$   |   $logN$~$N$   |         实现简单，能够进行有序性相关的操作         |            没有性能上界的保证，链接需要额外的空间            |
 |   平衡二叉树查找树   |                RedBlackBST                |     $logN$     |     $logN$     |   最优的查找和插入效率，能够进行有序性相关的操作   |                      链接需要额外的空间                      |
-|        散列表        | SeparateChain HashST LinearProbing HashST |                |                |         能够快速地查找和插入常见类型地数据         | 需要计算每种类型数据地散列，无法进行有序性线管地操作，链接和空节点需要额外的空间 |
+|        散列表        | SeparateChain HashST LinearProbing HashST |   $1$~$logN$   |   $1$~$logN$   |         能够快速地查找和插入常见类型的数据         | 需要计算每种类型数据地散列，无法进行有序性相关的操作，链接和空节点需要额外的空间 |
 
 
 
@@ -848,6 +848,16 @@ void BSTPrint(const struct BST* bst) {
 
 <img src="E:/Desktop/Algorithms/Algs4/image/2020-11-08 111923.png" alt="2020-11-08 111923" style="zoom: 80%;" />
 
+> 注意：这里采用的是使用return返回更新好结点的指针（引用）的方式递归向上传递给父结点，通知其最新的左/右子结点的指针（引用），从而来完成子结点的更新（删除或者删除）。例如如下形式就是典型的使用形式：
+>
+> `struct Node *deleteMin(struct Node*h);`
+>
+> `h->left=deleteMin(h->left);`
+>
+> 通过递归返回的时候更新父结点的指向子结点的指针（引用）会使用很方便。但若使用二级指针的方式来更新的话，会显得比较麻烦。可能需要如下的形式：
+>
+> `voide deleteMin(struct Node**h);`
+
 
 
 #### 3.2.2  查找操作
@@ -895,7 +905,7 @@ void BSTPrint(const struct BST* bst) {
 
 <img src="E:/Desktop/Algorithms/Algs4/image/2020-11-08 112439.png" alt="2020-11-08 112439" style="zoom:80%;" />
 
-*删除任意结点*的关键在于：`区分只有一个或者无子树的结点（可以看作是像deleteMin()一样的操作）和左右子树同时存在的结点`。无子树或者只有一个子树的结点只要将左子树（若存在）或者右子树接到待删结点的父结点的左/右边。而**左右子树同时存在的结点，需要在删除时暂时记录待删结点的引用，然后取出待删结点右子树中的最小结点用其来替代待删结点（需要将其执行deleteMin()操作），然后将待删结点的左右子树挂在该替代节点的左右两边。**
+*删除任意结点*的关键在于：`区分只有一个或者无子树的结点（可以看作是像deleteMin()一样的操作）和左右子树同时存在的结点`。无子树或者只有一个子树的结点只要将左子树（若存在）或者右子树接到待删结点的父结点的左/右边。而**左右子树同时存在的结点，需要在删除时暂时记录待删结点的引用，然后取出待删结点右子树中的最小结点用其来替代待删结点（需要将其执行deleteMin()操作），然后将调整后的左右子树挂在该替代节点的左右两边。**
 
 ```java
     private Node delete(Node x, Key key) {
@@ -1464,6 +1474,10 @@ public class RedBlackBST<Key extends Comparable<Key>, Value> {
     }
 }
 ```
+
+
+
+##### 3.3.2.1  对二叉搜索树的改造
 
 
 
