@@ -1084,7 +1084,7 @@ void BSTPrint(const struct BST* bst) {
 
 #### 3.3.2  红黑树
 
-**红黑树的本质就是通过普通二叉搜索树来实现完美平衡2-3树**，而2-3树可以保证我们的查找和插入操作都维持在$logN$级别
+**红黑树的本质就是通过普通二叉搜索树来实现完美平衡2-3树**，而通过这种方式实现的2-3树可以保证我们的查找和插入操作都维持在$logN$级别
 
 ```java
 import edu.princeton.cs.algs4.BlockFilter;
@@ -1477,23 +1477,126 @@ public class RedBlackBST<Key extends Comparable<Key>, Value> {
 
 
 
-##### 3.3.2.1  对二叉搜索树的改造
+##### 3.3.2.1  二叉搜索树改造
+
+为了使得上述普通的二叉搜索树能够支持红黑树的实现，我们需要在`private class Node`中加入一个名为color的布尔类型变量，当color==RED(true)表示该结点是一个红结点，这意味着该结点和其父结点组成了一个逻辑上的3-结点；否则为黑结点，这意味着该结点单独组成一个2-结点。
+
+<img src="image/2020-11-14 092242.png" alt="2020-11-14 092242" style="zoom:80%;" />
+
+除此之外我们还对红黑树做出如下的规定（这样我们的红黑树就如同下图一样）：
+
+- 红链接均为左链接（纯粹是为了处理的情况少点，方便）
+- 没有任何一个结点同时与两条红链接同时相连
+- 该树是完美黑色平衡的，即任意空链接到它的黑链接数量都是相同的
+- 根结点永远都是黑结点，空结点也永远都是黑结点
+
+<img src="image/2020-11-14 092401.png" alt="2020-11-14 092401" style="zoom:80%;" />
+
+这样做的好处在于代码复用性高，只要稍微对二叉搜索树进行改进，基本上只要对结点类定义、`put()`和`delete()`等方法进行改造就可以。
+
+##### 3.3.2.1  左右旋操作
+
+为了实现结点的插入，我们必须在之前了解下结点的左旋和右旋操作。**左旋**指的是以当前结点为中心进行逆时针方向旋转，该操作本质就是将该子树的根结点设置为原根结点的右子结点。比如它可以使得一个红链接为右链接的3-结点变成一个红链接为左链接的3-结点。
+
+```java
+    private Node rotateLeft(Node h) {
+        Node x = h.right;
+        h.right = x.left;
+        x.left = h;
+
+        x.color = h.color;
+        h.color = RED;
+        x.size = h.size;
+        h.size = size(h.left) + size(h.right) + 1;
+        return x;
+    }
+```
+
+<img src="image/2020-11-14 094122.png" alt="2020-11-14 094122" style="zoom:80%;" />
+
+<img src="image/2020-11-14 094141.png" alt="2020-11-14 094141" style="zoom:80%;" />
+
+而**右旋**与之相反，它以当前节点为中心进行顺时针方向旋转，该操作本质上就是将该指数的根结点设置为原根结点的左子结点。比如它可以将一个红链接为左链接的3-结点变成一个红链接为右链接的3-结点。
+
+```java
+    private Node rotateRight(Node h) {
+        Node x = h.left;
+        h.left = x.right;
+        x.right = h;
+
+        x.color = h.color;
+        h.color = RED;
+        x.size = h.size;
+        h.size = size(h.left) + size(h.right) + 1;
+        return x;
+    }
+```
+
+<img src="image/2020-11-14 094443.png" alt="2020-11-14 094443" style="zoom:80%;" />
+
+<img src="image/2020-11-14 094501_LI.jpg" alt="2020-11-14 094501_LI" style="zoom:80%;" />
 
 
 
-##### 3.3.2.1  插入操作
+##### 3.3.2.2  插入操作
 
-1、向2-结点进行插入
+在此之前，我们需要做如下规定：*新插入的结点总是红结点*
 
+1. **向2-结点进行插入**
 
+若向一个2-结点进行插入，则2-结点会直接变成3-结点。对于一个向左插入的红结点而言，新的结点对符合我们的要求，因此我们不需要做什么；但是对于一个向右插入的红结点而言，由于其插入的结点的红链接是右链接不符合我们“红链接必须是右链接”的前提假设，因此我们需要对其根结点进行左旋操作。
 
-2、向3-结点进行插入
+<img src="image/2020-11-14 095322.png" alt="2020-11-14 095322" style="zoom:80%;" />
 
+2. **向3-结点进行插入**
 
+若向一个3-结点进行插入，则按照2-3树的插入规则该结点会临时变成一个4-结点，然后取出其中间结点向上给原3-结点的父结点（本质就是将中间结点插入到其父结点中。而插入操作又等同于新来的结点的color==RED，所以在处理3-结点插入的时候特别需要面对子结点是红色的多种情况）。向3-结点插入新结点有如下3种情况：
 
-3、中间结点的向上（插入）传递
+- 向3-结点的右边插入
 
-该步骤在递归返回的时候完成相应的左/右旋转
+此时的处理就是直接变成临时4-结点，然后向上传递中间结点，而左右结点被分解变成了两个单独的2-结点。在程序中操作就只是简单的翻转颜色`flipColors()`而已
+
+- 向3-结点的左边插入
+
+此时的处理是让其直接变成临时4-结点，然后做右旋操作，最后向上传递中间结点，然后左右结点被分解成两个独立的2-结点。在程序中操作为左旋`rotateLeft()`+翻转颜色`flipColors()`
+
+- 向3-结点的中间插入
+
+此时的处理是让其直接变成临时的4-结点，然后做左旋操作，然后再右旋，最后向上传递中间结点，左右结点被分解成两个独立的2-结点。在程序中操作为左旋`rotateLeft()`+右旋`rotateRight()`+翻转颜色`flipColors()`
+
+<img src="image/2020-11-14 101137.png" alt="2020-11-14 101137" style="zoom:80%;" />
+
+3. **中间结点的向上（插入）传递**
+
+因为我们上面提到过，特别是对于向3-结点插入的时候必然存在一个向父结点插入中间结点的过程，因此简简单单找到合适的插入点然后做相应的旋转操作什么的显然是不够的。我们必须使用递归的方式，通过递归不断向下查找到合适的位置插入，然后再递归返回的途中使用相应的处理手段（旋转、翻转颜色使红结点变黑，黑结点变红）不断从下向上调整好所有路径上的结点，这样即使途中有向上传递中间结点的情况这样也能够完美的处理。
+
+由于只有向3-结点插入新结点才会发生向上传递的情况，所以我们可以以向3-结点插入的三种情况（左边插入、中间插入、右边插入）为模板做出`if() {  /*...*/ }`的调整，下图是3-结点插入后状态转移图（其中囊括了所有的处理情况），其中的①②③是我们的处理顺序：
+
+<img src="image/2020-11-14 101422.png" alt="2020-11-14 101422" style="zoom:80%;" />
+
+```java
+    private Node put(Node h, Key key, Value val) {
+        if (h == null)
+            return new Node(key, val, RED, 1);
+
+        int cmp = key.compareTo(h.key);
+        if (cmp < 0)
+            h.left = put(h.left, key, val);
+        else if (cmp > 0)
+            h.right = put(h.right, key, val);
+        else h.val = val;
+
+        /* 红黑树比普通二叉查找树多就多在如下部分： */
+        if (!isRed(h.left) && isRed(h.right))
+            h = rotateLeft(h);
+        if (isRed(h.left) && isRed(h.left.left))
+            h = rotateRight(h);
+        if (isRed(h.left) && isRed(h.right))
+            flipColors(h);
+        h.size = size(h.left) + size(h.right) + 1;
+        return h;
+    }
+```
 
 
 
@@ -1502,4 +1605,124 @@ public class RedBlackBST<Key extends Comparable<Key>, Value> {
 
 
 ##### 3.3.2.3  删除操作
+
+
+
+### 3.4  散列表
+
+#### 3.4.1  散列函数
+
+
+
+#### 3.4.2  基于拉链法的散列表
+
+基于拉链法的散列表使用一个大小为M（素数）、每一个元素指向一条链表的数组，将多个散列值相同的键-值对存放在同一个元素指向链表之中，从而避免碰撞冲突。
+
+<img src="image/2020-11-14 115346.png" alt="2020-11-14 115346" style="zoom:67%;" />
+
+插入时间复杂度：$N/M$(在散列值均匀的前提下)~$logN$
+
+查找时间复杂度：$N/M$(在散列值均匀的前提下)~$logN$
+
+```java
+import edu.princeton.cs.algs4.Queue;
+import edu.princeton.cs.algs4.SequentialSearchST;
+import edu.princeton.cs.algs4.StdOut;
+
+public class SeparateChainingHashST<Key, Value> {
+    private SequentialSearchST<Key, Value>[] st;
+    private int N;//键值对数
+    private int M;//散列表大小
+
+    //根据键key，使用散列函数计算该键在散列表中的索引
+    private int hash(Key key) {
+        return (key.hashCode() & 0x7fffffff) % M;
+    }
+
+    private void resize(int newM) {
+        SeparateChainingHashST<Key, Value> temp =
+                new SeparateChainingHashST<Key, Value>(newM);
+        for (int i = 0; i < M; i++)
+            for (Key key : st[i].keys())
+                temp.put(key, st[i].get(key));
+        this.M = temp.M;
+        this.N = temp.N;
+        this.st = temp.st;
+    }
+
+    public SeparateChainingHashST(int M) {
+        this.M = M;
+        this.N = 0;
+        st = (SequentialSearchST<Key, Value>[]) new SequentialSearchST[M];
+        for (int i = 0; i < M; ++i)
+            st[i] = new SequentialSearchST<>();
+    }
+
+    public SeparateChainingHashST() {
+        this(997);
+    }
+
+    public void put(Key key, Value val) {
+        if (N >= M * 10) resize(2 * M);
+
+        st[hash(key)].put(key, val);
+        N++;
+    }
+
+    public Value get(Key key) {
+        return (Value) st[hash(key)].get(key);
+    }
+
+    public void delete(Key key) {
+        st[hash(key)].delete(key);
+        N--;
+
+        if (N <= 2 * M) resize(M / 2);
+    }
+
+    public boolean isEmpty() {
+        return N == 0;
+    }
+
+    public int size() {
+        return N;
+    }
+
+    public boolean contains(Key key) {
+        return get(key) != null;
+    }
+
+    Iterable<Key> keys() {
+        Queue<Key> queue = new Queue<Key>();
+
+        for (int i = 0; i < M; ++i) {
+            if (!st[i].isEmpty()) {
+                Iterable<Key> t = st[i].keys();
+                for (Key key : t)
+                    queue.enqueue(key);
+            }
+        }
+        return queue;
+    }
+
+    public static void main(String[] args) {
+        SeparateChainingHashST<String, Integer> st = new SeparateChainingHashST<String, Integer>();
+
+        st.put("a", 43);
+        st.put("b", 32);
+        st.put("s", 23);
+        st.put("k", 12);
+        st.put("p", 97);
+        StdOut.println("size: " + st.size());
+        StdOut.println("a: " + st.get("a"));
+        StdOut.println("k: " + st.get("k"));
+        for (String str : st.keys())
+            StdOut.println(str);
+    }
+}
+```
+
+
+
+#### 3.4.3  基于线性探测法的散列表
 
