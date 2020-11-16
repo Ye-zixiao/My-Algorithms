@@ -1084,7 +1084,7 @@ void BSTPrint(const struct BST* bst) {
 
 #### 3.3.2  红黑树
 
-**红黑树的本质就是通过普通二叉搜索树来实现完美平衡2-3树**，而通过这种方式实现的2-3树可以保证我们的查找和插入操作都维持在$logN$级别
+**红黑树(左倾)的本质就是通过普通二叉搜索树来实现完美平衡2-3树**，而通过这种方式实现的2-3树可以保证我们的查找和插入操作都维持在$logN$级别
 
 ```java
 import edu.princeton.cs.algs4.BlockFilter;
@@ -1475,6 +1475,380 @@ public class RedBlackBST<Key extends Comparable<Key>, Value> {
 }
 ```
 
+C语言实现：
+
+```c
+/**
+ * 左倾红黑树实现
+ */
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define NODESTRLEN 64
+#define RED 1
+#define BLACK 0
+
+#define MAX(l,r) ((l)>(r)?(l):(r))
+
+struct Node {
+	char str[NODESTRLEN];
+	int val;
+	int color;
+	struct Node* left, * right;
+};
+
+struct RBT {
+	struct Node* root;
+};
+
+
+//结点创建
+struct Node* NodeCreate(const char* buf, int value) {
+	struct Node* node;
+	if ((node = malloc(sizeof(struct Node))) == NULL)
+		return NULL;
+	strncpy(node->str, buf, NODESTRLEN - 1);
+	node->str[NODESTRLEN - 1] = '\0';
+	node->val = value;
+	node->color = RED;
+	node->left = NULL;
+	node->right = NULL;
+	return node;
+}
+
+
+//红黑树初始化
+void RBTInit(struct RBT* rbt) {
+	rbt->root = NULL;
+}
+
+
+void NodeDestroy(struct Node* h) {
+	if (h == NULL)return;
+
+	if (h->left)NodeDestroy(h->left);
+	if (h->right)NodeDestroy(h->right);
+	free(h);
+}
+
+
+//红黑树销毁
+void RBTDestroy(struct RBT* rbt) {
+	if (rbt == NULL)return;
+	NodeDestroy(rbt->root);
+	rbt->root = NULL;
+}
+
+
+int isEmpty(const struct RBT* rbt) {
+	return (rbt == NULL || rbt->root == NULL) ? 1 : 0;
+}
+
+
+//判断当前结点是否为红结点
+int isRed(const struct Node* node) {
+	return node == NULL ? 0 : node->color ? 1 : 0;
+}
+
+
+int NodeSize(const struct Node* h) {
+	if (h == NULL)return 0;
+	return NodeSize(h->left) + NodeSize(h->right) + 1;
+}
+
+
+//结点总数
+int RBTSize(const struct RBT* rbt) {
+	if (rbt == NULL)return 0;
+	return NodeSize(rbt->root);
+}
+
+
+int height(const struct Node* node) {
+	if (node == NULL)return 0;
+	int hs = MAX(height(node->left), height(node->right));
+	return hs + ((node->color==BLACK) ? 1 : 0);
+}
+
+
+//树高
+int RBTHeight(const struct RBT* rbt) {
+	return rbt == NULL ? 0 : height(rbt->root);
+}
+
+
+//颜色翻转
+void flipColors(struct Node* h) {
+	h->color = !h->color;
+	h->left->color = !h->left->color;
+	h->right->color = !h->right->color;
+}
+
+
+//左旋
+struct Node* rotateLeft(struct Node* h) {
+	struct Node* x = h->right;
+	
+	h->right = x->left;
+	x->left = h;
+	x->color = h->color;
+	h->color = RED;
+	return x;
+}
+
+
+//右旋
+struct Node* rotateRight(struct Node* h) {
+	struct Node* x = h->left;
+
+	h->left = x->right;
+	x->right = h;
+	x->color = h->color;
+	h->color = RED;
+	return x;
+}
+
+
+/**
+ * 从当前结点的右子树中提出个结点使左子结点变成非2-结点
+ */
+struct Node* removeLeft(struct Node* h) {
+	flipColors(h);
+	if (isRed(h->right->left)) {
+		h->right = rotateRight(h->right);
+		h = rotateLeft(h);
+		flipColors(h);
+	}
+	return h;
+}
+
+
+/**
+ * 从当前结点的左子树中提出个结点使右子结点变成非2-结点 
+ */
+struct Node* removeRight(struct Node* h) {
+	flipColors(h);
+	if (isRed(h->left->left)) {
+		h = rotateRight(h);
+		flipColors(h);
+	}
+	return h;
+}
+
+
+//在删除结点后调用该函数来重新对结点进行调整，使其保持平衡
+struct Node* balance(struct Node* h) {
+	if (isRed(h->right))
+		h = rotateLeft(h);
+	if (isRed(h->left) && isRed(h->left->left))
+		h = rotateRight(h);
+	if (isRed(h->left) && isRed(h->right))
+		flipColors(h);
+	return h;
+}
+
+
+struct Node* NodeMin(struct Node* node) {
+	if (node == NULL)return NULL;
+	return node->left ? NodeMin(node->left) : node;
+}
+
+
+//返回最小键
+const char* RBTMin(const struct RBT* rbt) {
+	return isEmpty(rbt) ? NULL : NodeMin(rbt->root)->str;
+}
+
+
+struct Node* NodeMax(struct Node* node) {
+	if (node == NULL)return NULL;
+	return node->right ? NodeMax(node->right) : node;
+}
+
+
+//返回最大键
+const char* RBTMax(const struct RBT* rbt) {
+	return isEmpty(rbt) ? NULL : NodeMax(rbt->root)->str;
+}
+
+
+struct Node* NodePut(struct Node* h, const char* buf, int value) {
+	int cmp;
+
+	if (h == NULL)
+		return NodeCreate(buf, value);
+	if ((cmp = strcmp(buf, h->str)) < 0) {
+		h->left = NodePut(h->left, buf, value);
+	}
+	else if (cmp > 0) {
+		h->right = NodePut(h->right, buf, value);
+	}
+	else h->val = value;
+
+	if (!isRed(h->left) && isRed(h->right))
+		h = rotateLeft(h);
+	if (isRed(h->left) && isRed(h->left->left))
+		h = rotateRight(h);
+	if (isRed(h->left) && isRed(h->right))
+		flipColors(h);
+	return h;
+}
+
+
+//插入操作
+void RBTPut(struct RBT* rbt, const char* buf, int value) {
+	if (rbt == NULL) {
+		fprintf(stderr, "rbt is null\n");
+		return;
+	}
+	rbt->root = NodePut(rbt->root, buf, value);
+	rbt->root->color = BLACK;
+}
+
+
+int get(const struct Node* h, const char* buf) {
+	int cmp;
+
+	if (h == NULL)return -1;
+	if ((cmp = strcmp(buf,h->str)) < 0)
+		return get(h->left, buf);
+	else if (cmp > 0)
+		return get(h->right, buf);
+	return h->val;
+}
+
+
+//查找
+int RBTGet(const struct RBT* rbt, const char* buf) {
+	return rbt == NULL ? -1 : get(rbt->root, buf);
+}
+
+
+//检测是否存在该键
+int contains(const struct RBT* rbt, const char* buf) {
+	return RBTGet(rbt, buf) != -1;
+}
+
+
+struct Node* deleteMin(struct Node* h) {
+	if (h == NULL)return NULL;
+	if (h->left == NULL) {
+		free(h);
+		return NULL;
+	}
+	if (!isRed(h->left) && !isRed(h->left->left))
+		h = removeLeft(h);
+	h->left = deleteMin(h->left);
+	return balance(h);
+}
+
+
+//删除最小结点
+void RBTDeleteMin(struct RBT* rbt) {
+	if (rbt == NULL)return;
+	if (!isRed(rbt->root->left) && !isRed(rbt->root->right))
+		rbt->root->color = RED;
+	rbt->root = deleteMin(rbt->root);
+	if (!isEmpty(rbt))rbt->root->color = BLACK;
+}
+
+
+struct Node* deleteMax(struct Node* h) {
+	if (h == NULL)return NULL;
+	if (isRed(h->left))
+		h = rotateRight(h);
+	if (h->right == NULL) {
+		free(h);
+		return NULL;
+	}
+	if (!isRed(h->right) && !isRed(h->right->left))
+		h = removeRight(h);
+	h->right = deleteMax(h->right);
+	return balance(h);
+}
+
+
+//删除最大结点
+void RBTDeleteMax(struct RBT* rbt) {
+	if (rbt == NULL)return;
+	if (!isRed(rbt->root->left) && !isRed(rbt->root->right))
+		rbt->root->color = RED;
+	rbt->root = deleteMax(rbt->root);
+	if (!isEmpty(rbt))rbt->root->color = BLACK;
+}
+
+
+struct Node* delete(struct Node* h,const char*buf) {
+	int cmp;
+
+	if (h == NULL)return NULL;
+	if ((cmp = strcmp(buf, h->str)) < 0) {
+		if (!isRed(h->left) && !isRed(h->left->left))
+			h = removeLeft(h);
+		h->left = delete(h->left, buf);
+	}
+	else {
+		//printf("curr: %s\n", h->str);//m
+		if (isRed(h->left))
+			h = rotateRight(h);
+		if (cmp == 0 && h->right == NULL) {
+			free(h);
+			return NULL;
+		}
+		if (!isRed(h->right) && !isRed(h->right->left))
+			h = removeRight(h);
+
+		if (cmp == 0) {
+			struct Node* t = NodeMin(h->right);
+			strcpy(h->str, t->str);
+			h->val = t->val;
+			h->right = deleteMin(h->right);
+		}
+		else h->right = delete(h->right, buf);
+	}
+	return balance(h);
+}
+
+
+//任意删除
+void RBTDelete(struct RBT* rbt, const char* buf) {
+	if (isEmpty(rbt)) {//检查红黑树是否为空？
+		fprintf(stderr, "rbt is null or is empty\n");
+		return;
+	}
+	if (!contains(rbt, buf)) {//检测红黑树中是否包含该键
+		fprintf(stderr, "key: %s is not contain!\n", buf);
+		return;
+	}
+
+	if (!isRed(rbt->root->left) && !isRed(rbt->root->right))
+		rbt->root->color = RED;
+	rbt->root = delete(rbt->root, buf);
+	if (!isEmpty(rbt))rbt->root->color = BLACK;
+}
+
+
+static void printNode(const struct Node* node) {
+	if (node == NULL)return;
+	if (node->left)
+		printNode(node->left);
+	printf("str: %s, val: %d, color: %d\n", node->str, node->val,isRed(node));
+	if (node->right)
+		printNode(node->right);
+}
+
+
+//打印
+static void RBTPrint(const struct RBT* rbt) {
+	if (rbt == NULL) {
+		fprintf(stderr, "rbt is null\n");
+		return;
+	}
+	printNode(rbt->root);
+}
+```
+
 
 
 ##### 3.3.2.1  二叉搜索树改造
@@ -1602,9 +1976,186 @@ public class RedBlackBST<Key extends Comparable<Key>, Value> {
 
 ##### 3.3.2.2  删除最小/大值操作
 
+在2-3树删除最小/大值过程中，我们能够发现若最左边或最右边的结点是一个3-结点，那么我们以普通二叉搜索树的删除方式直接删除这个结点就行了，此时3-结点变成了2-结点，但丝毫不影响我们红黑树的完美平衡。但是当最左边或者最右边的结点为2-结点的时候就不一样了，此时若直接删除这个结点就会影响到红黑树的完美平衡性。因此删除最小/大值操作的关键在于：**沿着左链接或者右链接向下，保证不能直接删除一个2-结点，要确保当前结点总不是2-结点**（对于向左删除一定是向左偏的非2-结点，对于向右删除的一定向右偏的非2-结点，其中临时产生的4-结点一定是既向右又向左）。
+
+1. **删除最小值**
+
+因此在沿着左链接向下的过程中，当前结点有如下的3种情况：
+
+- 若当前结点的左子结点是3-结点
+
+则此时我们并不需要特别的处理，因为它本身就一定是一个向左偏的3-结点
+
+- 若当前节点的左子结点是2-结点，但右子结点不是2-结点
+
+  则此时左子结点需要到右子结点中“借”一个键移动到左子结点。因此在递归之前需要做出如下操作：①先进行颜色翻转处理（联想到插入时分解一个4-结点的时候也有一个颜色翻转的操作，这个和其下面的颜色翻转可以是其逆操作，不止一次是因为插入时本身也存在中间结点上提而多次调用的过程）；②然后对当前结点的右子结点进行右旋操作；③接着对当前结点做左旋操作，使得右子结点成为新的根结点（替代当前结点）；④最后再对根结点进行颜色翻转操作。
+
+  <img src="image/RBDelete.jpg" alt="RBDelete" style="zoom: 50%;" />
+
+- 若当前节点的左子结点和其右子结点都是2-结点
+
+  则此时需要将左子结点、右子结点和父结点中的最小键（其实这是从2-3树角度考虑的，在二叉搜索树实现的红黑树中不需要这个考虑，直接称当前结点即可）合并成一个4-结点（这里也不用像书上那样过多的考虑2-3-4树那样）。因此在递归向下前需要做出如下的操作：直接进行颜色翻转使得当前结点变成4-结点。
+
+  <img src="image/sing.jpg" alt="sing" style="zoom:50%;" />
+
+当完成上述的递归左链接向下的过程后，`deleteMin()`就可以被递归调用以对真正的欲删除的结点进行删除操作。需要注意的是：当完成删除操作之后，需要在递归返回的路径中依次对每一个结点执行再平衡操作，以保持我们对红黑树的预先规定。（当然其中很多细节需要不断查看源码进行体悟）
+
+```java
+    //翻转当前结点和左右孩子结点的颜色
+    private void flipColors(Node h) {
+        h.color = !h.color;
+        h.left.color = !h.left.color;
+        h.right.color = !h.right.color;
+    }
+
+    /* 从当前结点的右子结点中借一个结点给左子结点，使左子结点
+       变成一个3-结点；或者3者合并成为3-结点 */
+    private Node moveRedLeft(Node h) {
+        flipColors(h);
+        /* 若右子结点是一个3-结点，则提取一个结点给左子结点
+           使其成为3-结点 */
+        if (isRed(h.right.left)) {
+            h.right = rotateRight(h.right);
+            h = rotateLeft(h);
+            flipColors(h);
+        }
+        return h;
+    }
+
+    private Node deleteMin(Node h) {
+        if (h.left == null)
+            return null;
+
+        /* 左子结点不是3-结点的情况下需要进行moveRedLeft
+            局部调整作业，使得左子结点变成一个3结点 */
+        if (!isRed(h.left) && !isRed(h.left.left))
+            h = moveRedLeft(h);
+        h.left = deleteMin(h.left);
+        return balance(h);
+    }
+
+    public void deleteMin() {
+        if (!isRed(root.left) && !isRed(root.right))
+            root.color = RED;
+        root = deleteMin(root);
+        if (isEmpty()) root.color = BLACK;
+    }
+```
+
+
+
+2. **删除最大值**
+
+   其操作类似于删除最小值，但可能有一些细节上的不同。
+
+```java
+    //翻转当前结点和左右孩子结点的颜色
+    private void flipColors(Node h) {
+        h.color = !h.color;
+        h.left.color = !h.left.color;
+        h.right.color = !h.right.color;
+    }
+
+    /* 从当前结点的左子结点中借一个结点给右子结点，使右子结点
+        变得有剩余结点使得删除一个不影响红黑树的平衡 */
+    private Node moveRedRight(Node h) {
+        flipColors(h);
+        /* 若左子结点是一个3-结点，则提取一个结点给右子结点
+           使其成为3-结点 */
+        if (isRed(h.left.left)) {
+            h = rotateRight(h);
+            flipColors(h);
+        }
+        return h;
+    }
+
+    //在删除后做局部平衡处理
+    private Node balance(Node h) {
+        if (isRed(h.right))
+            h = rotateLeft(h);
+        if (isRed(h.left) && isRed(h.left.left))
+            h = rotateRight(h);
+        if (isRed(h.left) && isRed(h.right))
+            flipColors(h);
+        h.size = size(h.left) + size(h.right) + 1;
+        return h;
+    }
+
+    private Node deleteMax(Node h) {
+        if (isRed(h.left))
+            h = rotateRight(h);
+        if (h.right == null)
+            return null;
+
+        /* 右子结点不是3-结点的情况下需要进行moveRedRight
+            局部调整作业，使得右子结点变成一个3-结点 */
+        if (!isRed(h.right) && !isRed(h.right.left))
+            h = moveRedRight(h);
+        h.right = deleteMax(h.right);
+        return balance(h);
+    }
+
+    public void deleteMax() {
+        if (!isRed(root.left) && !isRed(root.right))
+            root.color = RED;
+        root = deleteMax(root);
+        if (isEmpty()) root.color = BLACK;
+    }
+```
+
 
 
 ##### 3.3.2.3  删除操作
+
+红黑树的任意删除操作其实本质上就是删除最小值操作和删除最大值操作的的扩展版，它结合向了左删除或者向右删除的特征。**若我们想要删除的结点在当前结点的左子树上，则要确保当前结点一定是一个向左偏的非2-结点；若我们想要删除的结点在当前结点的右子树上（或欲删除结点在就是当前结点），则要确保当前结点一定是向右偏的非2-结点**。我们会惊奇地发现：删除当前结点和删除右子树上的结点都被归为了一类处理。
+
+因为**即使在删除的过程中红黑树也仍然保持着完美平衡**（因为我们删除前的操作都是通过局部微调的方式维持着平衡的状态，顶多就是出现某一个非2-结点的红链接方向向右而已，这都是为了在要在3-结点身上删除一个键值对使其变成2-结点做准备）。所以我们有理由相信当即将删除那个指定结点的时候，它一定是一个向左偏的3-结点（向左删除）或者是一个向右偏的3-结点（向右删除）或者是一个临时4-结点。
+
+当我们需要向右删除或者删除当前结点时仍然是基本上如同处理一个删除最小值的情况：①当前结点的右子结点本身就是3-结点；②当前结点的右子结点为2-结点，但是左子结点为3-结点；③当前结点、左右子结点都是2-结点。所以处理它们的方法基本上相同，就是让当前结点变成向右偏的非2-结点。
+
+<img src="image/rdelete.jpg" alt="rdelete" style="zoom: 50%;" />
+
+还是通过代码进行理解更好：
+
+```java
+    private Node delete(Node h, Key key) {
+        //欲删除结点在左子树中
+        if (key.compareTo(h.key) < 0) {
+            if (!isRed(h.left) && !isRed(h.left.left))
+                h = moveRedLeft(h);
+            h.left = delete(h.left, key);
+        }
+        //欲删除结点在右子树或者当前结点就是
+        else {
+            if (isRed(h.left))
+                h = rotateRight(h);
+            /* 若当前结点确实是欲删除结点，若右边没有子结点，则由于红黑树在删除
+            	的过程中仍然是平衡的，所以当前结点左边是绝对没有子结点，即使有
+                也被上一步的右旋操作处理掉了。所以这里直接删除返回null本质上与
+                上面的deleteMax()我个人觉得区别不大。*/
+            if (key.compareTo(h.key) == 0 && h.right == null)
+                return null;
+            if (!isRed(h.right) && !isRed(h.right.left))
+                h = moveRedRight(h);
+            
+            if (key.compareTo(h.key) == 0) {
+                h.val = get(h.right, min(h.right).key);
+                h.key = min(h.right).key;
+                h.right = deleteMin(h.right);
+            } else h.right = delete(h.right, key);
+        }
+        return balance(h);
+    }
+
+    public void delete(Key key) {
+        if (!isRed(root.left) && !isRed(root.right))
+            root.color = RED;
+        root = delete(root, key);
+        if (!isEmpty()) root.color = BLACK;
+    }
+```
+
+
 
 
 
@@ -1725,4 +2276,117 @@ public class SeparateChainingHashST<Key, Value> {
 
 
 #### 3.4.3  基于线性探测法的散列表
+
+实现散列表的另一种方式使用大小为M的数组保存N个键-值对，其中M>N。这种方法依靠数组中的空位解决碰撞冲突。基于这种策略的所有方法统称为开放地址散列表。而开放地址散列表种最简单的一种方法就是线性探测法：*当碰撞（指定索引上已经被别的键-值对占据），此时我们直接检测下一个位置（通过索引+1），若没有使用就存放在这个位置（可以重复）*。
+
+插入操作时间复杂度：常数阶~$logN$
+
+查找操作时间复杂度：常数阶~$logN$
+
+```java
+import edu.princeton.cs.algs4.Queue;
+import edu.princeton.cs.algs4.StdOut;
+
+import javax.sound.sampled.Line;
+
+public class LinearProbingHashST<Key, Value> {
+    private int N;
+    private int M = 16;
+    private Key[] keys;
+    private Value[] vals;
+
+    private int hash(Key key) {
+        return (key.hashCode() & 0x7fffffff) % M;
+    }
+
+    private void resize(int cap) {
+        LinearProbingHashST<Key, Value> t =
+                new LinearProbingHashST<Key, Value>(cap);
+        for (int i = 0; i < M; i++)
+            if (keys[i] != null)
+                t.put(keys[i], vals[i]);
+        keys = t.keys;
+        vals = t.vals;
+        M = t.M;
+    }
+
+    public LinearProbingHashST() {
+        keys = (Key[]) new Object[M];
+        vals = (Value[]) new Object[M];
+    }
+
+    public LinearProbingHashST(int m) {
+        keys = (Key[]) new Object[m];
+        vals = (Value[]) new Object[m];
+        M = m;
+    }
+
+    public void put(Key key, Value val) {
+        if (N >= M / 2) resize(M * 2);
+
+        int i = hash(key);
+        for (; keys[i] != null; i = (i + 1) % M)
+            if (keys[i].equals(key)) {
+                vals[i] = val;
+                return;
+            }
+        keys[i] = key;
+        vals[i] = val;
+        N++;
+    }
+
+    public Value get(Key key) {
+        for (int i = hash(key); keys[i] != null; i = (i + 1) % M)
+            if (keys[i].equals(key))
+                return vals[i];
+        return null;
+    }
+
+    public void delete(Key key) {
+        if (!contains(key)) return;
+
+        //删除指定的键-值对
+        int i = hash(key);
+        while (!key.equals(keys[i]))
+            i = (i + 1) % M;
+        keys[i] = null;
+        vals[i] = null;
+
+        /* 将删除键-值对右边的键-值对重新插入，这样防止后续的键-值对
+            无法查找到（因为这些键-值对很有可能是通过探针的方式插入的） */
+        i = (i + 1) % M;
+        for (; keys[i] != null; i = (i + 1) % M) {
+            Key keyToRedo = keys[i];
+            Value valToRedo = vals[i];
+            keys[i] = null;
+            vals[i] = null;
+            N--;
+            put(keyToRedo, valToRedo);
+        }
+        N--;
+        if (N > 0 && N == M / 8)
+            resize(M / 2);
+    }
+
+    public Iterable<Key> keys() {
+        Queue<Key> queue = new Queue<Key>();
+        for (int i = 0; i < M; ++i)
+            if (keys[i] != null)
+                queue.enqueue(keys[i]);
+        return queue;
+    }
+
+    public boolean contains(Key key) {
+        return get(key) != null;
+    }
+
+    public int size() {
+        return N;
+    }
+
+    public boolean isEmpty() {
+        return N == 0;
+    }
+}
+```
 
