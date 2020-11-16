@@ -167,22 +167,6 @@ void BSTDeleteMax(struct BST* bst) {
 }
 
 
-//从当前结点的右子树中挑一个最小结点（并从该树中移除，但不是free），
-//其中过程需要调整移除后的右子树
-struct Node* RemoveRightMin(struct Node* h, struct Node** r) {
-	if (h == NULL) { *r = NULL; return NULL; }
-
-	if (h->left != NULL) {
-		h->left = RemoveRightMin(h->left, r);
-		return h;
-	}
-	else {
-		*r = h;
-		return h->right;
-	}
-}
-
-
 //任意删除
 struct Node* delete(struct Node* h, const char* buf) {
 	//t表示替代删除结点的结点指针,right用来表示右子树的根节点（可能跟原来不一样）
@@ -199,30 +183,19 @@ struct Node* delete(struct Node* h, const char* buf) {
 		return h;
 	}
 	else {
+		//若当前结点的右子树为空
         if(h->right==NULL){
             t=h->left;
             free(h);
             return t;
         }
+		//若当前结点的右子树非空
         else {
             strcpy(h->str,min(h->right)->str);
             h->val=min(h->right)->val;
             h->right=deleteMin(h->right);
             return h;
         }
-
-		// right = RemoveRightMin(h->right, &t);
-		// if(t==NULL){//右边根本就没有
-		// 	t = h->left;
-		// 	free(h);
-		// 	return t;
-		// }
-		// else {
-		// 	t->left = h->left;
-		// 	t->right = right;
-		// 	free(h);
-		// 	return t;
-		// }
 	}
 }
 

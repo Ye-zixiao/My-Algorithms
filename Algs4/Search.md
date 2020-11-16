@@ -582,6 +582,8 @@ C语言实现：
 #include <stdlib.h>
 
 #define MAXLINE 64
+#undef min
+#undef max
 
 struct Node {
 	char str[MAXLINE];
@@ -607,7 +609,7 @@ struct Node* CreateNode(const char* buf, int value) {
 }
 
 
-void InitBST(struct BST*bst) {
+void InitBST(struct BST* bst) {
 	bst->root = NULL;
 }
 
@@ -629,10 +631,10 @@ void BSTDestroy(struct BST* bst) {
 
 
 //插入操作
-struct Node*insert(struct Node*h,const char*buf,int value){
+struct Node* insert(struct Node* h, const char* buf, int value) {
 	if (h == NULL)
 		return CreateNode(buf, value);
-	
+
 	int cmp = strcmp(buf, h->str);
 	if (cmp < 0)
 		h->left = insert(h->left, buf, value);
@@ -650,7 +652,7 @@ void BSTInsert(struct BST* bst, const char* buf, int value) {
 
 
 //查找操作
-int get(const struct Node* h,const char*buf) {
+int get(const struct Node* h, const char* buf) {
 	int cmp;
 
 	if (h == NULL)return -1;
@@ -744,26 +746,10 @@ void BSTDeleteMax(struct BST* bst) {
 }
 
 
-//从当前结点的右子树中挑一个最小结点（并从该树中移除，但不是free），
-//其中过程需要调整移除后的右子树
-struct Node* RemoveRightMin(struct Node* h, struct Node** r) {
-	if (h == NULL) { *r = NULL; return NULL; }
-
-	if (h->left != NULL) {
-		h->left = RemoveRightMin(h->left, r);
-		return h;
-	}
-	else {
-		*r = h;
-		return h->right;
-	}
-}
-
-
 //任意删除
 struct Node* delete(struct Node* h, const char* buf) {
 	//t表示替代删除结点的结点指针,right用来表示右子树的根节点（可能跟原来不一样）
-	struct Node* t, * right;
+	struct Node* t/*, * right*/;
 	int cmp;
 
 	if (h == NULL)return NULL;
@@ -776,17 +762,18 @@ struct Node* delete(struct Node* h, const char* buf) {
 		return h;
 	}
 	else {
-		right = RemoveRightMin(h->right, &t);
-		if(t==NULL){//右边根本就没有
+		//若当前结点的右子树为空
+		if (h->right == NULL) {
 			t = h->left;
 			free(h);
 			return t;
 		}
+		//若当前结点的右子树非空
 		else {
-			t->left = h->left;
-			t->right = right;
-			free(h);
-			return t;
+			strcpy(h->str, min(h->right)->str);
+			h->val = min(h->right)->val;
+			h->right = deleteMin(h->right);
+			return h;
 		}
 	}
 }
@@ -1568,7 +1555,7 @@ int RBTSize(const struct RBT* rbt) {
 int height(const struct Node* node) {
 	if (node == NULL)return 0;
 	int hs = MAX(height(node->left), height(node->right));
-	return hs + ((node->color==BLACK) ? 1 : 0);
+	return hs + ((node->color == BLACK) ? 1 : 0);
 }
 
 
@@ -1589,7 +1576,7 @@ void flipColors(struct Node* h) {
 //左旋
 struct Node* rotateLeft(struct Node* h) {
 	struct Node* x = h->right;
-	
+
 	h->right = x->left;
 	x->left = h;
 	x->color = h->color;
@@ -1625,7 +1612,7 @@ struct Node* removeLeft(struct Node* h) {
 
 
 /**
- * 从当前结点的左子树中提出个结点使右子结点变成非2-结点 
+ * 从当前结点的左子树中提出个结点使右子结点变成非2-结点
  */
 struct Node* removeRight(struct Node* h) {
 	flipColors(h);
@@ -1633,18 +1620,6 @@ struct Node* removeRight(struct Node* h) {
 		h = rotateRight(h);
 		flipColors(h);
 	}
-	return h;
-}
-
-
-//在删除结点后调用该函数来重新对结点进行调整，使其保持平衡
-struct Node* balance(struct Node* h) {
-	if (isRed(h->right))
-		h = rotateLeft(h);
-	if (isRed(h->left) && isRed(h->left->left))
-		h = rotateRight(h);
-	if (isRed(h->left) && isRed(h->right))
-		flipColors(h);
 	return h;
 }
 
@@ -1711,7 +1686,7 @@ int get(const struct Node* h, const char* buf) {
 	int cmp;
 
 	if (h == NULL)return -1;
-	if ((cmp = strcmp(buf,h->str)) < 0)
+	if ((cmp = strcmp(buf, h->str)) < 0)
 		return get(h->left, buf);
 	else if (cmp > 0)
 		return get(h->right, buf);
@@ -1728,6 +1703,18 @@ int RBTGet(const struct RBT* rbt, const char* buf) {
 //检测是否存在该键
 int contains(const struct RBT* rbt, const char* buf) {
 	return RBTGet(rbt, buf) != -1;
+}
+
+
+//在删除结点后调用该函数来重新对结点进行调整，使其保持平衡
+struct Node* balance(struct Node* h) {
+	if (isRed(h->right))
+		h = rotateLeft(h);
+	if (isRed(h->left) && isRed(h->left->left))
+		h = rotateRight(h);
+	if (isRed(h->left) && isRed(h->right))
+		flipColors(h);
+	return h;
 }
 
 
@@ -1779,27 +1766,31 @@ void RBTDeleteMax(struct RBT* rbt) {
 }
 
 
-struct Node* delete(struct Node* h,const char*buf) {
-	int cmp;
-
+struct Node* delete(struct Node* h, const char* buf) {
 	if (h == NULL)return NULL;
-	if ((cmp = strcmp(buf, h->str)) < 0) {
+
+	if (strcmp(buf, h->str) < 0) {
 		if (!isRed(h->left) && !isRed(h->left->left))
 			h = removeLeft(h);
 		h->left = delete(h->left, buf);
 	}
 	else {
-		//printf("curr: %s\n", h->str);//m
 		if (isRed(h->left))
 			h = rotateRight(h);
-		if (cmp == 0 && h->right == NULL) {
+        /* 算法4书中使用的key.compareTo(h.key)其实没有什么用，
+        	其比较顶多就是确保就是我们需要找的结点，但实际上即使
+        	不适用这个我们也可以确保。因为我们要删的结点肯定会通过
+        	上面执行的局部调整变成一个3-结点中的一个，这样才可以
+        	使删除操作变得方便，而且它一定是既没有左子结点也肯定
+        	没有右子结点!😋*/
+		if (/*strcmp(buf,h->str)==0 && */h->right == NULL) {
 			free(h);
 			return NULL;
 		}
 		if (!isRed(h->right) && !isRed(h->right->left))
 			h = removeRight(h);
 
-		if (cmp == 0) {
+		if (strcmp(buf, h->str) == 0) {
 			struct Node* t = NodeMin(h->right);
 			strcpy(h->str, t->str);
 			h->val = t->val;
@@ -1833,7 +1824,7 @@ static void printNode(const struct Node* node) {
 	if (node == NULL)return;
 	if (node->left)
 		printNode(node->left);
-	printf("str: %s, val: %d, color: %d\n", node->str, node->val,isRed(node));
+	printf("str: %s, val: %d, color: %d\n", node->str, node->val, isRed(node));
 	if (node->right)
 		printNode(node->right);
 }
@@ -2109,7 +2100,7 @@ static void RBTPrint(const struct RBT* rbt) {
 
 红黑树的任意删除操作其实本质上就是删除最小值操作和删除最大值操作的的扩展版，它结合向了左删除或者向右删除的特征。**若我们想要删除的结点在当前结点的左子树上，则要确保当前结点一定是一个向左偏的非2-结点；若我们想要删除的结点在当前结点的右子树上（或欲删除结点在就是当前结点），则要确保当前结点一定是向右偏的非2-结点**。我们会惊奇地发现：删除当前结点和删除右子树上的结点都被归为了一类处理。
 
-因为**即使在删除的过程中红黑树也仍然保持着完美平衡**（因为我们删除前的操作都是通过局部微调的方式维持着平衡的状态，顶多就是出现某一个非2-结点的红链接方向向右而已，这都是为了在要在3-结点身上删除一个键值对使其变成2-结点做准备）。所以我们有理由相信当即将删除那个指定结点的时候，它一定是一个向左偏的3-结点（向左删除）或者是一个向右偏的3-结点（向右删除）或者是一个临时4-结点。
+**即使在删除的过程中红黑树也仍然保持着完美平衡**（因为我们删除前的操作都是通过局部微调的方式维持着平衡的状态，顶多就是出现某一个非2-结点的红链接方向向右而已，这都是为了在要在3-结点身上删除一个键值对使其变成2-结点做准备）。所以我们有理由相信当即将删除那个指定结点的时候，它一定是一个向左偏的3-结点（向左删除）或者是一个向右偏的3-结点（向右删除）或者是一个临时4-结点或者本来就单单一个结点。
 
 当我们需要向右删除或者删除当前结点时仍然是基本上如同处理一个删除最小值的情况：①当前结点的右子结点本身就是3-结点；②当前结点的右子结点为2-结点，但是左子结点为3-结点；③当前结点、左右子结点都是2-结点。所以处理它们的方法基本上相同，就是让当前结点变成向右偏的非2-结点。
 

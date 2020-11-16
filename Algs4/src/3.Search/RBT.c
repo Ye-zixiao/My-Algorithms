@@ -88,7 +88,7 @@ int RBTSize(const struct RBT* rbt) {
 int height(const struct Node* node) {
 	if (node == NULL)return 0;
 	int hs = MAX(height(node->left), height(node->right));
-	return hs + ((node->color==BLACK) ? 1 : 0);
+	return hs + ((node->color == BLACK) ? 1 : 0);
 }
 
 
@@ -109,7 +109,7 @@ void flipColors(struct Node* h) {
 //左旋
 struct Node* rotateLeft(struct Node* h) {
 	struct Node* x = h->right;
-	
+
 	h->right = x->left;
 	x->left = h;
 	x->color = h->color;
@@ -145,7 +145,7 @@ struct Node* removeLeft(struct Node* h) {
 
 
 /**
- * 从当前结点的左子树中提出个结点使右子结点变成非2-结点 
+ * 从当前结点的左子树中提出个结点使右子结点变成非2-结点
  */
 struct Node* removeRight(struct Node* h) {
 	flipColors(h);
@@ -219,7 +219,7 @@ int get(const struct Node* h, const char* buf) {
 	int cmp;
 
 	if (h == NULL)return -1;
-	if ((cmp = strcmp(buf,h->str)) < 0)
+	if ((cmp = strcmp(buf, h->str)) < 0)
 		return get(h->left, buf);
 	else if (cmp > 0)
 		return get(h->right, buf);
@@ -299,27 +299,25 @@ void RBTDeleteMax(struct RBT* rbt) {
 }
 
 
-struct Node* delete(struct Node* h,const char*buf) {
-	int cmp;
-
+struct Node* delete(struct Node* h, const char* buf) {
 	if (h == NULL)return NULL;
-	if ((cmp = strcmp(buf, h->str)) < 0) {
+
+	if (strcmp(buf, h->str) < 0) {
 		if (!isRed(h->left) && !isRed(h->left->left))
 			h = removeLeft(h);
 		h->left = delete(h->left, buf);
 	}
 	else {
-		//printf("curr: %s\n", h->str);//m
 		if (isRed(h->left))
 			h = rotateRight(h);
-		if (cmp == 0 && h->right == NULL) {
+		if (/*strcmp(buf,h->str)==0 && */h->right == NULL) {
 			free(h);
 			return NULL;
 		}
 		if (!isRed(h->right) && !isRed(h->right->left))
 			h = removeRight(h);
 
-		if (cmp == 0) {
+		if (strcmp(buf, h->str) == 0) {
 			struct Node* t = NodeMin(h->right);
 			strcpy(h->str, t->str);
 			h->val = t->val;
@@ -353,7 +351,7 @@ static void printNode(const struct Node* node) {
 	if (node == NULL)return;
 	if (node->left)
 		printNode(node->left);
-	printf("str: %s, val: %d, color: %d\n", node->str, node->val,isRed(node));
+	printf("str: %s, val: %d, color: %d\n", node->str, node->val, isRed(node));
 	if (node->right)
 		printNode(node->right);
 }
@@ -390,9 +388,15 @@ int main(void)
 	printf("k's value: %d\n", RBTGet(&rbt, "k"));
 	RBTDeleteMin(&rbt);
 	RBTDeleteMax(&rbt);
-	RBTDelete(&rbt, "u");
-	RBTDelete(&rbt, "g");
 	RBTPrint(&rbt);
+	RBTDelete(&rbt, "u");
+	RBTPrint(&rbt);
+	printf("size: %d\n", RBTSize(&rbt));
+	RBTDelete(&rbt, "g");
+	putchar('\n');
+	RBTPrint(&rbt);
+	printf("size: %d\n", RBTSize(&rbt));
+	printf("d's value: %d\n", RBTGet(&rbt, "d"));
 	printf("height: %d\n", RBTHeight(&rbt));
 	RBTDestroy(&rbt);
 
