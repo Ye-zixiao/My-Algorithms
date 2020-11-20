@@ -497,3 +497,379 @@ public class BreadthFirstPaths {
 
 ### 4.2 有向图
 
+有向图API：`public class Digraph`
+
+- `Drigraph(int V)`
+- `Digraph(In in)`
+- `int V()`
+- `int E()`
+- `void addEdge(int v,int w)`
+- `Iterable<Integer> adj(int v)`
+- `Digraph reverse()`
+- `String toString()`
+
+```java
+import edu.princeton.cs.algs4.Bag;
+import edu.princeton.cs.algs4.In;
+import edu.princeton.cs.algs4.StdOut;
+
+public class Digraph {
+    private final int V;
+    private int E;
+    private Bag<Integer>[] adj;
+
+    public Digraph(int V) {
+        this.V = V;
+        this.E = 0;
+        adj = (Bag<Integer>[]) new Bag[V];
+        for (int v = 0; v < V; v++)
+            adj[v] = new Bag<Integer>();
+    }
+
+    public Digraph(In in) {
+        this(in.readInt());
+        int E = in.readInt();
+        for (int i = 0; i < E; i++) {
+            int v = in.readInt();
+            int w = in.readInt();
+            addEdge(v, w);
+        }
+    }
+
+    public int V() {
+        return V;
+    }
+
+    public int E() {
+        return E;
+    }
+
+    public void addEdge(int v, int w) {
+        adj[v].add(w);
+        E++;
+    }
+
+    //返回指定点的指出点集合
+    public Iterable<Integer> adj(int v) {
+        return adj[v];
+    }
+
+    //返回一个反向图
+    public Digraph reverse() {
+        Digraph R = new Digraph(V);
+        for (int v = 0; v < V; v++)
+            for (int w : adj[v])
+                R.addEdge(w, v);
+        return R;
+    }
+
+    public String toString() {
+        String s = V + " vertices, " + E + " deges\n";
+        for (int v = 0; v < V; v++) {
+            s += v + ": ";
+            for (int w : this.adj(v))
+                s += w + " ";
+            s += "\n";
+        }
+        return s;
+    }
+
+    public static void main(String[] args) {
+        Digraph digraph = new Digraph(new In(args[0]));
+        StdOut.println(args[0]);
+
+        StdOut.println(digraph);
+    }
+}
+```
+
+
+
+##### 4.2.1   使用DFS解决可达性问题
+
+```java
+import edu.princeton.cs.algs4.Bag;
+import edu.princeton.cs.algs4.In;
+import edu.princeton.cs.algs4.Stack;
+import edu.princeton.cs.algs4.StdOut;
+
+public class DirectedDFS {
+    private boolean[] marked;
+
+    //使用递归实现的深度优先搜索方法
+    private void dfs(Digraph G, int v) {
+        marked[v] = true;
+        for (int w : G.adj(v))
+            if (!marked[w]) dfs(G, w);
+    }
+
+    //使用栈实现的深度优先搜索方法
+    private void dfs1(Digraph G, int v) {
+        Stack<Integer> stack = new Stack<Integer>();
+        stack.push(v);
+        marked[v] = true;
+
+        while (!stack.isEmpty()) {
+            int t = stack.pop();
+            for (int w : G.adj(t)) {
+                if (!marked[w]) {
+                    stack.push(w);
+                    marked[w] = true;
+                }
+            }
+        }
+    }
+
+    public boolean marked(int v) {
+        return marked[v];
+    }
+
+    public DirectedDFS(Digraph G, int s) {
+        marked = new boolean[G.V()];
+        dfs1(G, s);
+    }
+
+    public DirectedDFS(Digraph G, Iterable<Integer> sources) {
+        marked = new boolean[G.V()];
+        for (int s : sources)
+            if (!marked[s]) dfs1(G, s);
+    }
+
+    public static void main(String[] args) {
+        Digraph digraph = new Digraph(new In(args[0]));
+
+        Bag<Integer> sources = new Bag<Integer>();
+        for (int i = 1; i < args.length; ++i)
+            sources.add(Integer.parseInt(args[i]));
+
+        DirectedDFS reachable = new DirectedDFS(digraph, sources);
+        for (int v = 0; v < digraph.V(); v++)
+            if (reachable.marked(v)) StdOut.print(v + " ");
+        StdOut.println();
+    }
+}
+```
+
+
+
+##### 4.2.2  使用DFS路径搜索
+
+```java
+import edu.princeton.cs.algs4.In;
+import edu.princeton.cs.algs4.Stack;
+import edu.princeton.cs.algs4.StdOut;
+
+public class DepthFirstDirectedPaths {
+    private boolean[] marked;
+    private int[] edgeTo;
+    private final int s;
+
+    //使用递归实现的深度优先搜索方法
+    private void dfs(Digraph G, int s) {
+        marked[s] = true;
+        for (int w : G.adj(s))
+            if (!marked[w]) {
+                edgeTo[w] = s;
+                dfs(G, w);
+            }
+    }
+
+    //使用栈实现的深度优先搜索方法
+    private void dfs1(Digraph G, int s) {
+        Stack<Integer> stack = new Stack<Integer>();
+        stack.push(s);
+        edgeTo[s] = s;
+        marked[s] = true;
+
+        while (!stack.isEmpty()) {
+            int t = stack.pop();
+            for (int w : G.adj(t)) {
+                if (!marked[w]) {
+                    stack.push(w);
+                    edgeTo[w] = t;
+                    marked[w] = true;
+                }
+            }
+        }
+    }
+
+    public DepthFirstDirectedPaths(Digraph G, int s) {
+        marked = new boolean[G.V()];
+        edgeTo = new int[G.V()];
+        this.s = s;
+        dfs1(G, s);
+    }
+
+    public boolean hasPathTo(int v) {
+        return marked[v];
+    }
+
+    //返回从起点s到指定点v的路径容器引用
+    public Iterable<Integer> pathTo(int v) {
+        if (!hasPathTo(v)) return null;
+
+        Stack<Integer> stack = new Stack<Integer>();
+        for (int p = v; p != s; p = edgeTo[p])
+            stack.push(p);
+        stack.push(s);
+        return stack;
+    }
+
+    public static void main(String[] args) {
+        Digraph digraph = new Digraph(new In(args[0]));
+        int s = Integer.parseInt(args[1]);
+        DepthFirstDirectedPaths paths = new DepthFirstDirectedPaths(digraph, s);
+
+        for (int v = 0; v < digraph.V(); ++v) {
+            StdOut.print(s + " to " + v + ": ");
+            if (paths.hasPathTo(v))
+                for (int x : paths.pathTo(v))
+                    if (x == s) StdOut.print(x);
+                    else StdOut.print("-" + x);
+            StdOut.println();
+        }
+    }
+}
+```
+
+
+
+##### 4.2.3  使用BFS路径搜索
+
+```java
+import edu.princeton.cs.algs4.*;
+
+public class BreadFirstDirectedPaths {
+    private boolean[] marked;
+    private int[] parents;
+    private final int s;
+
+    //广度优先搜索路径方法
+    private void bfs(Digraph G, int s) {
+        Queue<Integer> queue = new Queue<Integer>();
+        queue.enqueue(s);
+        marked[s] = true;
+        parents[s] = s;
+
+        while (!queue.isEmpty()) {
+            int t = queue.dequeue();
+            for (int w : G.adj(t)) {
+                if (!marked[w]) {
+                    queue.enqueue(w);
+                    marked[w] = true;
+                    parents[w] = t;
+                }
+            }
+        }
+    }
+
+    public BreadFirstDirectedPaths(Digraph G, int s) {
+        marked = new boolean[G.V()];
+        parents = new int[G.V()];
+        this.s = s;
+        bfs(G, s);
+    }
+
+    public boolean hasPathTo(int v) {
+        return marked[v];
+    }
+
+    //返回从起点s到指定点v的路径容器引用
+    public Iterable<Integer> pathTo(int v) {
+        if (!hasPathTo(v)) return null;
+
+        Stack<Integer> stack = new Stack<Integer>();
+        for (int p = v; p != s; p = parents[p])
+            stack.push(p);
+        stack.push(s);
+        return stack;
+    }
+
+    public static void main(String[] args) {
+        Digraph digraph = new Digraph(new In(args[0]));
+        int s = Integer.parseInt(args[1]);
+        BreadFirstDirectedPaths paths = new BreadFirstDirectedPaths(digraph, s);
+
+        for (int v = 0; v < digraph.V(); ++v) {
+            StdOut.print(s + " to " + v + ": ");
+            if (paths.hasPathTo(v))
+                for (int x : paths.pathTo(v))
+                    if (x == s) StdOut.print(x);
+                    else StdOut.print("-" + x);
+            StdOut.println();
+        }
+    }
+}
+```
+
+
+
+##### 4.2.4  使用DFS判断有无环
+
+其判断的方法就是使用深度优先搜索DFS算法遍历整个图中的结点，若在遍历到顶点v时发现有一个顶点w已经在栈中了，则说明本来就有一条路径w->v，现在又发现一条路径v->w，即有环。
+
+```java
+import edu.princeton.cs.algs4.In;
+import edu.princeton.cs.algs4.Stack;
+import edu.princeton.cs.algs4.StdOut;
+
+public class DirectedCycle {
+    private boolean[] marked;
+    private int[] edgeTo;
+    private Stack<Integer> cycle;
+    private boolean[] onStack;
+
+    private void dfs(Digraph G, int v) {
+        onStack[v] = true;
+        marked[v] = true;
+        for (int w : G.adj(v)) {
+            //若之前已经找到一个环了，则既然已经判定了有环就没有必要再找了
+            if (this.hasCycle()) return;
+            else if (!marked[w]) {
+                edgeTo[w] = v;
+                dfs(G, w);
+            }
+            /* 若w在栈中，说明有个v->w有个环，那么我们就可以沿着edgeTo数组向回找
+                以将这个环中的所有结点(v->w->v)加入到cycle中 */
+            else if (onStack[w]) {
+                cycle = new Stack<Integer>();
+                for (int p = v; p != w; p = edgeTo[p])
+                    cycle.push(p);
+                cycle.push(w);
+                cycle.push(v);
+            }
+        }
+        onStack[v] = false;
+    }
+
+    public DirectedCycle(Digraph G) {
+        marked = new boolean[G.V()];
+        edgeTo = new int[G.V()];
+        onStack = new boolean[G.V()];
+        for (int v = 0; v < G.V(); ++v)
+            if (!marked[v]) dfs1(G, v);
+    }
+
+    public boolean hasCycle() {
+        return cycle != null;
+    }
+
+    public Iterable<Integer> cycle() {
+        return cycle;
+    }
+
+    public static void main(String[] args) {
+        Digraph digraph = new Digraph(new In(args[0]));
+        DirectedCycle cycle = new DirectedCycle(digraph);
+
+        if (cycle.hasCycle()) {
+            StdOut.println("This Digragh has cycle:");
+            for (int v : cycle.cycle()) {
+                StdOut.print(v + " ");
+            }
+            StdOut.println();
+        }
+    }
+}
+```
+
