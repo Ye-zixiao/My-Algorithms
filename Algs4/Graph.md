@@ -1150,3 +1150,82 @@ public class TransitiveClosure {
 
 ### 4.3 最小生成树
 
+图的生成图指的是它的一棵含有其所有顶点的无环连通子图。一幅加权无向图的最小生成树(MST)是它的一棵权值（树中所有边的权值之和）最小的生成树。
+
+切分定理：在一幅加权图中，给定任意的切分，它的横截边中权重最小者必然是属于图的最小生成树。按照这一规则，我们就有了最小生成树的贪心算法：将图中初始状态下的所有边标记为灰色，找到其中一种切分，它产生的横截边均不为黑色。将它的权重最小横截边标记为黑色。反复，知道标记V-1条黑色边为止。如下图：
+
+<img src="image/2020-11-22 113517.png" alt="2020-11-22 113517" style="zoom:67%;" />
+
+#### 4.3.1  加权无向图的表示
+
+我们所有的最小生成树计算都是基于加权无向图这一数据结构，其与无向图数据结构最大的区别在于它使用类对象Edge来代替了原始临界表中的原始数据类型int。
+
+<img src="image/2020-11-22 112013.png" alt="2020-11-22 112013" style="zoom:67%;" />
+
+```java
+import edu.princeton.cs.algs4.Bag;
+import edu.princeton.cs.algs4.In;
+import edu.princeton.cs.algs4.StdOut;
+
+public class EdgeWeightedGraph {
+    private final int V;
+    private int E;
+    private Bag<Edge>[] adj;
+
+    public EdgeWeightedGraph(int V) {
+        this.V = V;
+        this.E = 0;
+        adj = (Bag<Edge>[]) new Bag[V];
+        for (int v = 0; v < V; ++v)
+            adj[v] = new Bag<Edge>();
+    }
+
+    public EdgeWeightedGraph(In in) {
+        this(in.readInt());
+        int E = in.readInt();
+        for (int i = 0; i < E; i++) {
+            Edge edge = new Edge(in.readInt(), in.readInt(), in.readDouble());
+            addEdge(edge);
+        }
+    }
+
+    public void addEdge(Edge e) {
+        int v = e.either(), w = e.other(v);
+        adj[v].add(e);
+        adj[w].add(e);
+        E++;
+    }
+
+    //返回某一顶点的所有邻边
+    public Iterable<Edge> adj(int v) {
+        return adj[v];
+    }
+
+    //返回存放加权无向图中的所有的边的容器
+    public Iterable<Edge> edges() {
+        Bag<Edge> b = new Bag<Edge>();
+        for (int v = 0; v < V; v++)
+            for (Edge e : adj[v])
+                /* 因为边Edge会在加权无向图中的两个顶点的邻接表中存放两次，
+                    所以我们在将边存放到容器中时应当避免存放两次。在这里只
+                    获取存放在索引较小的顶点邻接表中的边 */
+                if (e.other(v) > v) b.add(e);
+        return b;
+    }
+
+    public int V() {
+        return V;
+    }
+
+    public int E() {
+        return E;
+    }
+
+    public static void main(String[] args) {
+        EdgeWeightedGraph graph = new EdgeWeightedGraph(new In(args[0]));
+
+        for (Edge edge : graph.edges())
+            StdOut.println(edge);
+    }
+}
+```
