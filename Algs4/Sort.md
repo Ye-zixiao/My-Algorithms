@@ -579,6 +579,23 @@ public class MaxPQ<Key extends Comparable<Key>> {
 
 #### 索引优先队列
 
+索引优先队列的作用在于允许用户引用；已经进入优先队列的元素，其关键就是给其中每一个元素添加一个索引。我们可以认为这种数据结构就是一种能够快速访问其中最小元素的数组。其API如下所示：
+
+`public class IndexMinPQ<Item extends Comparable<Item>>`
+
+- `IndexMinPQ(int maxN)`
+- `void insert(int k,Item item)`
+- `void change(int k,Item item)`
+- `boolean contains(int k)`
+- `void delete(int k)`
+- `Item min()`
+- `int minIndex()`
+- `int delMin()`
+- `boolean isEmty()`
+- `int size()`
+
+
+
 
 
 #### 堆排序

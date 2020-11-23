@@ -1229,3 +1229,167 @@ public class EdgeWeightedGraph {
     }
 }
 ```
+
+
+
+#### 4.3.2  Prim算法
+
+Prim算法的核心思想就是：在最小生成树MST生长的过程中，每一次迭代总是将不在MST中但与之连接的顶点且权重最小的边加入到MST之中。
+
+##### 4.3.2.1  Prim算法延时实现
+
+其具体的做法就是：
+
+1. 先将图中的某一点加入到MST之中（通过marked标记），并将其所有的邻边加入到最小优先队列之MinPQ中；
+2. 接着MinPQ从中取出最小连接边，若对端的顶点没有被标记，则将这个边和对端的点都加入到MST之中。然后紧接着对对端的顶点执行步骤1，将其所有有效邻边加入到MinPQ；
+3. 实际上MST不仅维护着一群顶点（通过marked布尔类型数组），而且还维护着一群边（通过一个容器）。
+
+这样我们就可以不断地重复1-2步骤，就可以生成最小生成树MST了，具体如下图所示：
+
+<img src="image/2020-11-23 101251.png" alt="2020-11-23 101251" style="zoom:67%;" />
+
+时间复杂度：$ElogV$
+
+空间复杂度：$V$
+
+```java
+import edu.princeton.cs.algs4.In;
+import edu.princeton.cs.algs4.MinPQ;
+import edu.princeton.cs.algs4.Queue;
+import edu.princeton.cs.algs4.StdOut;
+
+public class LazyPrimMST {
+    private boolean[] marked;
+    private Queue<Edge> mst;
+    private MinPQ<Edge> pq;
+
+    public LazyPrimMST(EdgeWeightedGraph G) {
+        pq = new MinPQ<Edge>();
+        marked = new boolean[G.V()];
+        mst = new Queue<Edge>();
+
+        visit(G, 0);
+        while (!pq.isEmpty()) {
+            Edge e = pq.delMin();
+
+            int v = e.either(), w = e.other(v);
+            /* 之所以需要跳过一些无效的边，是因为这些边之前就被添加到
+             *   最小优先队列之中（当时它们确实是有效的），但是随着两端
+             *   顶点陆续加入MST就导致这些边变得无效，且仍然存在于MinPQ
+             *   之中。因此我们必须通过检查优先队列之中每一条取出边，通过
+             *   检查两端的顶点是否加入到MST的方法来检测这条边是否有效。
+             *   只有在有效的前提下加入到MST之中 */
+            if (marked[v] && marked[w]) continue;
+            mst.enqueue(e);
+            if (!marked[v]) visit(G, v);
+            if (!marked[w]) visit(G, w);
+
+        }
+    }
+
+    //将v的所有有效邻边加入到MinPQ之中
+    private void visit(EdgeWeightedGraph G, int v) {
+        marked[v] = true;
+        for (Edge edge : G.adj(v))
+            if (!marked[edge.other(v)])
+                pq.insert(edge);
+    }
+
+    //返回最小生成树中的所有边
+    public Iterable<Edge> edges() {
+        return mst;
+    }
+
+    public double weight() {
+        double ret = 0.0;
+        for (Edge e : mst)
+            ret += e.weight();
+        return ret;
+    }
+
+    public static void main(String[] args) {
+        EdgeWeightedGraph graph = new EdgeWeightedGraph(new In(args[0]));
+        LazyPrimMST mst = new LazyPrimMST(graph);
+
+        for (Edge e : mst.edges())
+            StdOut.println(e);
+    }
+}
+```
+
+
+
+##### 4.3.2.2  Prim算法即时实现
+
+最小生成树生成时间复杂度：$ElogV$
+
+空间复杂度：$V$
+
+```java
+import edu.princeton.cs.algs4.In;
+import edu.princeton.cs.algs4.IndexMinPQ;
+import edu.princeton.cs.algs4.Queue;
+import edu.princeton.cs.algs4.StdOut;
+
+public class PrimMST {
+    private Edge[] edgeTo;
+    private double[] distTo;
+    private boolean[] marked;
+    private IndexMinPQ<Double> pq;
+
+    public PrimMST(EdgeWeightedGraph G) {
+        edgeTo = new Edge[G.V()];
+        distTo = new double[G.V()];
+        marked = new boolean[G.V()];
+        for (int v = 0; v < G.V(); ++v)
+            distTo[v] = Double.POSITIVE_INFINITY;
+        pq = new IndexMinPQ<Double>(G.V());
+
+        distTo[0] = 0.0;
+        pq.insert(0, 0.0);
+        while (!pq.isEmpty())
+            visit(G, pq.delMin());
+    }
+
+    /* 访问结点v的所有邻边，若该边有效且它的权重比现有w到最小生成树的权
+        重还要低，则将其替换为最新边edgeTo[w]=...和权重值distTo[w]=... */
+    private void visit(EdgeWeightedGraph G, int v) {
+        marked[v] = true;
+        for (Edge e : G.adj(v)) {
+            int w = e.other(v);
+            if (!marked[w] && e.weight() < distTo[w]) {
+                edgeTo[w] = e;
+                distTo[w] = e.weight();
+                if (pq.contains(w)) pq.change(w, distTo[w]);
+                else pq.insert(w, distTo[w]);
+            }
+        }
+    }
+
+    //返回最小生成树中的所有边
+    public Iterable<Edge> edges() {
+        Queue<Edge> queue = new Queue<Edge>();
+        for (Edge edge : edgeTo)
+            if (edge != null)
+                queue.enqueue(edge);
+        return queue;
+    }
+
+    public double weight() {
+        double ret = 0.0;
+        for (Edge edge : edges())
+            ret += edge.weight();
+        return ret;
+    }
+
+    public static void main(String[] args) {
+        EdgeWeightedGraph graph = new EdgeWeightedGraph(new In(args[0]));
+        PrimMST mst = new PrimMST(graph);
+
+        for (Edge edge : mst.edges())
+            StdOut.println(edge);
+        StdOut.printf("Total price: %.2f", mst.weight());
+    }
+}
+```
+
