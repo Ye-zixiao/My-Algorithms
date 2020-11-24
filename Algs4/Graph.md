@@ -1240,8 +1240,8 @@ Prim算法的核心思想就是：在最小生成树MST生长的过程中，每�
 
 其具体的做法就是：
 
-1. 先将图中的某一点加入到MST之中（通过marked标记），并将其所有的邻边加入到最小优先队列之MinPQ中；
-2. 接着MinPQ从中取出最小连接边，若对端的顶点没有被标记，则将这个边和对端的点都加入到MST之中。然后紧接着对对端的顶点执行步骤1，将其所有有效邻边加入到MinPQ；
+1. 先将图中的某一点加入到MST之中（通过marked标记），并将其所有的邻边加入到最小优先队列MinPQ中；
+2. 接着MinPQ从中取出最小连接边，若对端的顶点没有被标记，然后紧接着对对端的顶点执行步骤1，将其所有有效邻边加入到MinPQ；
 3. 实际上MST不仅维护着一群顶点（通过marked布尔类型数组），而且还维护着一群边（通过一个容器）。
 
 这样我们就可以不断地重复1-2步骤，就可以生成最小生成树MST了，具体如下图所示：
@@ -1321,6 +1321,19 @@ public class LazyPrimMST {
 
 ##### 4.3.2.2  Prim算法即时实现
 
+Prim算法延时实现和及时实现的区别在于：
+
+- Prim算法的延时实现的关键在于让最小优先队列MinPQ维护着MST中点的所有未加入MST邻边（这些邻边中本身还包括无效的边，即它们的两端顶点已经加入到MST之中），然后在每一次迭代中取出权值最小的有效邻边和那个对端点加入到MST之中；
+- 而Prim算法的及时实现的关键在于让最小索引优先队列IndexMinPQ维护着未加入到MST的剩余顶点到MST的最小权重距离，这些权重距离（有些是多条边权重的叠加，有些是就是直接的邻边的权重）。然后我们在每一次迭代中取出连接到MST代价最小的未加入点，让该点加入到MST之中，随便添加那条连接边。
+
+所以我们可以看到，延时实现的关键在于维护**未加入MST的邻边**，而问题在于邻边可能有些是无效的；而及时实现的关键在于维护**未加入MST的所有点以及它们到MST的距离**，这些距离对点而言都是唯一的，当这个点到MST距离最小时一定这个距离指的就是连接两者的那条邻边。
+
+![2020-11-24 105338](image/2020-11-24 105338.png)
+
+每次将一个点加入到MST之后，就需要利用现有的信息更新所有为加入到MST顶点到MST权重距离。
+
+
+
 最小生成树生成时间复杂度：$ElogV$
 
 空间复杂度：$V$
@@ -1337,6 +1350,23 @@ public class PrimMST {
     private boolean[] marked;
     private IndexMinPQ<Double> pq;
 
+    /* 访问结点v的所有邻边，若该边有效且它的权重比现有w到最小生成树的权
+        重还要低，则将其替换为最新边edgeTo[w]=...和权重值distTo[w]=... */
+    private void visit(EdgeWeightedGraph G, int v) {
+        marked[v] = true;
+        for (Edge e : G.adj(v)) {
+            /* 每加入一个顶点到MST之后，就遍历它的所有临近顶点，
+	            更新加入到MST的权重路径信息 */
+            int w = e.other(v);
+            if (!marked[w] && e.weight() < distTo[w]) {
+                edgeTo[w] = e;
+                distTo[w] = e.weight();
+                if (pq.contains(w)) pq.change(w, distTo[w]);
+                else pq.insert(w, distTo[w]);
+            }
+        }
+    }
+
     public PrimMST(EdgeWeightedGraph G) {
         edgeTo = new Edge[G.V()];
         distTo = new double[G.V()];
@@ -1349,21 +1379,6 @@ public class PrimMST {
         pq.insert(0, 0.0);
         while (!pq.isEmpty())
             visit(G, pq.delMin());
-    }
-
-    /* 访问结点v的所有邻边，若该边有效且它的权重比现有w到最小生成树的权
-        重还要低，则将其替换为最新边edgeTo[w]=...和权重值distTo[w]=... */
-    private void visit(EdgeWeightedGraph G, int v) {
-        marked[v] = true;
-        for (Edge e : G.adj(v)) {
-            int w = e.other(v);
-            if (!marked[w] && e.weight() < distTo[w]) {
-                edgeTo[w] = e;
-                distTo[w] = e.weight();
-                if (pq.contains(w)) pq.change(w, distTo[w]);
-                else pq.insert(w, distTo[w]);
-            }
-        }
     }
 
     //返回最小生成树中的所有边
@@ -1392,4 +1407,82 @@ public class PrimMST {
     }
 }
 ```
+
+过程图示：
+
+<img src="image/2020-11-24 112736.png" alt="2020-11-24 112736" style="zoom:50%;" />
+
+
+
+#### 4.3.3 Kruskal算法
+
+算法原理：按照权重顺序（从小到大）处理它们，将边加入到最小生成树MST之中，加入到的边不会形成环，直到树中不会含有V-1条边为止。即由一片森林变成一棵树。
+
+时间复杂度：$ElogE$
+
+空间复杂度：$E$
+
+```java
+import edu.princeton.cs.algs4.In;
+import edu.princeton.cs.algs4.MinPQ;
+import edu.princeton.cs.algs4.StdOut;
+import edu.princeton.cs.algs4.UF;
+
+import java.util.ArrayDeque;
+import java.util.Queue;
+
+public class KruskalMST {
+    private Queue<Edge> mst;
+
+    public KruskalMST(EdgeWeightedGraph G) {
+        mst = new ArrayDeque<Edge>();
+        MinPQ<Edge> pq = new MinPQ<Edge>();
+        UF uf = new UF(G.V());//并查集用来检测换的存在性
+        for (Edge e : G.edges()) pq.insert(e);
+
+        while (!pq.isEmpty() && mst.size() < G.V() - 1) {
+            Edge e = pq.delMin();
+            int v = e.either(), w = e.other(v);
+            /* 若这两条边之前就已经相连了，则此时再添加这条v-w的新边，
+             *   必然会导致MST形成一个环，所以我们应该跳过这条边，将其
+             *   从最小优先队列中删除 */
+            if (uf.connected(v, w)) continue;
+            uf.union(v, w);
+            mst.add(e);
+        }
+    }
+
+    public Iterable<Edge> edges() {
+        return mst;
+    }
+
+    public double weight() {
+        double ret = 0.0;
+        for (Edge e : mst)
+            ret += e.weight();
+        return ret;
+    }
+
+    public static void main(String[] args) {
+        EdgeWeightedGraph graph = new EdgeWeightedGraph(new In(args[0]));
+        KruskalMST mst = new KruskalMST(graph);
+        for (Edge edge : mst.edges())
+            StdOut.println(edge);
+        StdOut.printf("total weight: %.2f", mst.weight());
+    }
+}
+```
+
+各个最小生成树算法总结（假设为V个顶点E条边的连通图，在最坏情况下）：
+
+| 算法           | 空间复杂度 | 时间复杂度 |
+| -------------- | ---------- | ---------- |
+| 延时的Prim算法 | $E$        | $ElogE$    |
+| 即时的Prim算法 | $V$        | $ElogV$    |
+| Kruskal算法    | $E$        | $ElogE$    |
+
+其中即时的Prim算法是这里面最好的。
+
+
+### 4.4 最短路径
 
