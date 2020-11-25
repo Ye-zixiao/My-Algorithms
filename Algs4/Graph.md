@@ -1483,6 +1483,165 @@ public class KruskalMST {
 
 其中即时的Prim算法是这里面最好的。
 
-
 ### 4.4 最短路径
+
+加权有向图的数据结构表示:`public EdgeWeightDigraph`
+
+- `EdgeWeightDigraph(int V)`
+- `EdgeWeightDigraph(In in)`
+- `void addEdge(DirectedEdge edge)`
+- `int V()`
+- `int E()`
+- `Iterable<DirectedEdge> adj(int v)`
+- `Iterable<DirectedEdge> edges()`
+
+```java
+import edu.princeton.cs.algs4.Bag;
+import edu.princeton.cs.algs4.In;
+import edu.princeton.cs.algs4.StdOut;
+
+public class EdgeWeightDigraph {
+    private final int V;
+    private int E;
+    private Bag<DirectedEdge>[] adj;
+
+    public EdgeWeightDigraph(int V) {
+        this.V = V;
+        this.E = 0;
+        adj = (Bag<DirectedEdge>[]) new Bag[V];
+        for (int v = 0; v < V; ++v)
+            adj[v] = new Bag<DirectedEdge>();
+    }
+
+    public EdgeWeightDigraph(In in) {
+        this(in.readInt());
+        this.E = in.readInt();
+        while (!in.isEmpty()) {
+            DirectedEdge edge = new DirectedEdge(in.readInt(), in.readInt(), in.readDouble());
+            addEdge(edge);
+        }
+    }
+
+    public int V() {
+        return V;
+    }
+
+    public int E() {
+        return E;
+    }
+
+    public void addEdge(DirectedEdge edge) {
+        adj[edge.from()].add(edge);
+//        E++;
+    }
+
+    public Iterable<DirectedEdge> adj(int v) {
+        return adj[v];
+    }
+
+    public Iterable<DirectedEdge> edges() {
+        Bag<DirectedEdge> bag = new Bag<DirectedEdge>();
+        for (int v = 0; v < V; ++v)
+            for (DirectedEdge edge : adj[v])
+                bag.add(edge);
+        return bag;
+    }
+
+    public static void main(String[] args) {
+        EdgeWeightDigraph digraph = new EdgeWeightDigraph(new In(args[0]));
+
+        for (int v = 0; v < digraph.V(); ++v) {
+            for (DirectedEdge edge : digraph.adj(v))
+                StdOut.print(edge + "  ");
+            StdOut.println();
+        }
+    }
+}
+```
+
+
+
+#### 4.4.1  Dijkstra算法
+
+Dijkstra算法的核心思想其实与Prim算法类似，**Prim的核心在于每一次迭代的过程中添加离MST最近的未加入MST顶点，而Dijkstra算法的核心在于每次迭代的过程中添加离起点最近的未加入SPT的顶点**（其中MST指的是最小生成树，SPT指的是最短路径树）。
+
+在Prim算法中，我们最重要的操作就是`visit()`：我们每次向最小生成树MST加入一个顶点之后，就会通过它的所有邻边去更新剩余未加入顶点到MST的距离信息distTo[]和edgeTo[]（distTo[]也必然是在索引最小优先队列IndexMinPQ之中）。完成这些更新操作之后，Prim算法就会从队列中取出下一个最小顶点重复上面的操作。这里的`visit()`操作的本质就是①加入一个顶点和②更新剩余的顶点信息
+
+同样的，在Dijkstra算法中也有类似的操作，可以说基本上与Prim算法类似，即书中所谓的放松`relax()`操作：我们每次向最短路径树加入一个顶点之后，就会通过它的所有邻边去更新剩余未加入顶点到起点的距离信息distTo[]和指入边edgeTo[]（distTo[]同样的也是在索引最小优先队列IndexMinPQ之中）。完成这些操作之后，Dijkstra算法就会从队列中取出下一个最小顶点重复上面的操作。因此，我们可以认为Dijkstra算法其实本质上和Prim算法有很多相似的地方🧐。下面演示的是顶点v加入到SPT之后对distTo[w]和edgeTo[w]的`relax()`更新操作：
+
+<img src="image/2020-11-25 120429.png" alt="2020-11-25 120429" style="zoom: 80%;" />
+
+```java
+import edu.princeton.cs.algs4.In;
+import edu.princeton.cs.algs4.IndexMinPQ;
+import edu.princeton.cs.algs4.Stack;
+import edu.princeton.cs.algs4.StdOut;
+
+public class DijkstraSP {
+    private DirectedEdge[] edgeTo;
+    private double[] distTo;
+    private IndexMinPQ<Double> pq;
+
+    public DijkstraSP(EdgeWeightDigraph G, int s) {
+        edgeTo = new DirectedEdge[G.V()];
+        distTo = new double[G.V()];
+        pq = new IndexMinPQ<Double>(G.V());
+
+        for (int v = 0; v < G.V(); ++v)
+            distTo[v] = Double.POSITIVE_INFINITY;
+        distTo[s] = 0.0;
+
+        pq.insert(s, 0.0);
+        while (!pq.isEmpty())
+            relax(G, pq.delMin());
+    }
+
+    private void relax(EdgeWeightDigraph G, int v) {
+        for (DirectedEdge e : G.adj(v)) {
+            int w = e.to();
+            if (distTo[w] > distTo[v] + e.weight()) {
+                distTo[w] = distTo[v] + e.weight();
+                edgeTo[w] = e;
+                if (pq.contains(w)) pq.changeKey(w, distTo[w]);
+                else pq.insert(w, distTo[w]);
+            }
+        }
+    }
+
+    public double distTo(int v) {
+        return distTo[v];
+    }
+
+    public boolean hasPathTo(int v) {
+//        return edgeTo[v]!=null;
+        return distTo[v] < Double.POSITIVE_INFINITY;
+    }
+
+    public Iterable<DirectedEdge> pathTo(int v) {
+        if (!hasPathTo(v)) return null;
+        Stack<DirectedEdge> path = new Stack<DirectedEdge>();
+        for (DirectedEdge e = edgeTo[v]; e != null; e = edgeTo[e.from()])
+            path.push(e);
+        return path;
+    }
+
+    public static void main(String[] args) {
+        EdgeWeightDigraph digraph = new EdgeWeightDigraph(new In(args[0]));
+        DijkstraSP dijkstraSP = new DijkstraSP(digraph, 0);
+
+        for (int v = 1; v < digraph.V(); ++v) {
+            StdOut.print(0 + "->" + v + ": ");
+            double weight = 0.0;
+            for (DirectedEdge edge : dijkstraSP.pathTo(v)) {
+                weight += edge.weight();
+                if (edge.from() != 0)
+                    StdOut.printf("->%d", edge.to());
+                else
+                    StdOut.printf("%d->%d", edge.from(), edge.to());
+            }
+            StdOut.printf("   (total weight: %.2f)\n", weight);
+        }
+    }
+}
+```
 
