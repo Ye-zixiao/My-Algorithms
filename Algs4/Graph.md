@@ -1645,3 +1645,163 @@ public class DijkstraSP {
 }
 ```
 
+计算过程图示：
+
+<img src="image/2020-11-26 115251.png" alt="2020-11-26 115251" style="zoom:50%;" />
+
+
+
+#### 4.4.2 无环加权有向图中的最短路径算法
+
+计算无环加权有向图中的最短路径的核心思想就是：按照无环图中的拓扑顺序对图中的所有顶点进行relax松弛操作（沿路更新distTo[w]和edgeTo[w]）。这样我们就可以简单的获得其中的最短路径。
+
+```java
+import edu.princeton.cs.algs4.*;
+import edu.princeton.cs.algs4.DirectedEdge;
+
+public class AcyclicSP {
+    private DirectedEdge[] edgeTo;
+    private double[] distTo;
+
+    private void realx(EdgeWeightedDigraph G, int v) {
+        for (DirectedEdge e : G.adj(v)) {
+            int w = e.to();
+            if (distTo[w] > distTo[v] + e.weight()) {
+                distTo[w] = distTo[v] + e.weight();
+                edgeTo[w] = e;
+            }
+        }
+    }
+
+    public AcyclicSP(EdgeWeightedDigraph G, int s) {
+        edgeTo = new DirectedEdge[G.V()];
+        distTo = new double[G.V()];
+        for (int v = 0; v < G.V(); ++v)
+            distTo[v] = Double.POSITIVE_INFINITY;
+        distTo[s] = 0.0;
+
+        /* 按照拓扑排序的顺序对每一个顶点进行relax放松操作，即
+        沿着拓扑顺序对路径上的每一个顶点的distTo[w]和edgeTo[w]
+        进行更新操作。 */
+        Topological top = new Topological(G);
+        for (int v : top.order())
+            realx(G, v);
+    }
+
+    public double distTo(int v) {
+        return distTo[v];
+    }
+
+    public boolean hasPathTo(int v) {
+        return distTo[v] < Double.POSITIVE_INFINITY;
+    }
+
+    public Iterable<DirectedEdge> pathTo(int v) {
+        if (!hasPathTo(v)) return null;
+        Stack<DirectedEdge> stack = new Stack<DirectedEdge>();
+        for (DirectedEdge e = edgeTo[v]; e != null; e = edgeTo[e.from()])
+            stack.push(e);
+        return stack;
+    }
+
+    public static void main(String[] args) {
+        In in = new In(args[0]);
+        int s = Integer.parseInt(args[1]);
+        EdgeWeightedDigraph G = new EdgeWeightedDigraph(in);
+
+        AcyclicSP sp = new AcyclicSP(G, s);
+        for (int v = 0; v < G.V(); v++) {
+            if (sp.hasPathTo(v)) {
+                StdOut.printf("%d to %d (%.2f)  ", s, v, sp.distTo(v));
+                for (DirectedEdge e : sp.pathTo(v)) {
+                    StdOut.print(e + "   ");
+                }
+                StdOut.println();
+            } else {
+                StdOut.printf("%d to %d         no path\n", s, v);
+            }
+        }
+    }
+}
+```
+
+执行过程图示：
+
+<img src="image/2020-11-26 115413.png" alt="2020-11-26 115413" style="zoom: 67%;" />
+
+
+
+与上面相反的是，使用拓扑排序+松弛操作组合还可以计算无环加权有向图中的最长路径，它的操作基本上与前者相反，尽可能取大一点。如下所示：
+
+```java
+import edu.princeton.cs.algs4.*;
+import edu.princeton.cs.algs4.DirectedEdge;
+
+public class AcyclicLP {
+    private DirectedEdge[] edgeTo;
+    private double[] distTo;
+
+    private void relax(EdgeWeightedDigraph G, int v) {
+        for (DirectedEdge e : G.adj(v)) {
+            int w = e.to();
+            if (distTo[w] < distTo[v] + e.weight()) {
+                distTo[w] = distTo[v] + e.weight();
+                edgeTo[w] = e;
+            }
+        }
+    }
+
+    public AcyclicLP(EdgeWeightedDigraph G, int s) {
+        edgeTo = new DirectedEdge[G.V()];
+        distTo = new double[G.V()];
+        for (int v = 0; v < G.V(); ++v)
+            distTo[v] = Double.NEGATIVE_INFINITY;
+        distTo[s] = 0.0;
+
+        Topological top = new Topological(G);
+        for (int v : top.order())
+            relax(G, v);
+    }
+
+    public boolean hasPathTo(int v) {
+        return distTo[v] > Double.NEGATIVE_INFINITY;
+    }
+
+    public double distTo(int v) {
+        return distTo[v];
+    }
+
+    public Iterable<DirectedEdge> pathTo(int v) {
+        if (!hasPathTo(v)) return null;
+        Stack<DirectedEdge> stack = new Stack<DirectedEdge>();
+        for (DirectedEdge e = edgeTo[v]; e != null; e = edgeTo[e.from()])
+            stack.push(e);
+        return stack;
+    }
+
+    public static void main(String[] args) {
+        In in = new In(args[0]);
+        int s = Integer.parseInt(args[1]);
+        EdgeWeightedDigraph G = new EdgeWeightedDigraph(in);
+
+        AcyclicLP lp = new AcyclicLP(G, s);
+
+        for (int v = 0; v < G.V(); v++) {
+            if (lp.hasPathTo(v)) {
+                StdOut.printf("%d to %d (%.2f)  ", s, v, lp.distTo(v));
+                for (DirectedEdge e : lp.pathTo(v)) {
+                    StdOut.print(e + "   ");
+                }
+                StdOut.println();
+            } else {
+                StdOut.printf("%d to %d         no path\n", s, v);
+            }
+        }
+    }
+}
+```
+
+
+
+
+
