@@ -1561,7 +1561,7 @@ public class EdgeWeightDigraph {
 
 
 
-#### 4.4.1  Dijkstra算法
+#### 4.4.1  Dijkstra算法(非负加权有向图)
 
 Dijkstra算法的核心思想其实与Prim算法类似，**Prim的核心在于每一次迭代的过程中添加离MST最近的未加入MST顶点，而Dijkstra算法的核心在于每次迭代的过程中添加离起点最近的未加入SPT的顶点**（其中MST指的是最小生成树，SPT指的是最短路径树）。
 
@@ -1800,6 +1800,12 @@ public class AcyclicLP {
     }
 }
 ```
+
+
+
+#### 4.4.3 Bellman_Ford算法(一般加权有向图)
+
+算法所需时间和$EV$成正比空间与$V$成正比。
 
 
 
