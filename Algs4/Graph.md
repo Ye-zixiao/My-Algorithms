@@ -428,6 +428,8 @@ public class Cycle {
 
 ##### 4.1.2.1  使用BFS路径搜索
 
+此时搜寻到的路径必然是到达指定定点最短的。
+
 ```java
 import edu.princeton.cs.algs4.In;
 import edu.princeton.cs.algs4.Queue;
@@ -1561,9 +1563,9 @@ public class EdgeWeightDigraph {
 
 
 
-#### 4.4.1  Dijkstra算法(非负加权有向图)
+#### 4.4.1  Dijkstra算法
 
-Dijkstra算法的核心思想其实与Prim算法类似，**Prim的核心在于每一次迭代的过程中添加离MST最近的未加入MST顶点，而Dijkstra算法的核心在于每次迭代的过程中添加离起点最近的未加入SPT的顶点**（其中MST指的是最小生成树，SPT指的是最短路径树）。
+Dijkstra算法主要用来解决*非负加权有向图*的最路径问题，Dijkstra算法的核心思想其实与Prim算法类似，**Prim的核心在于每一次迭代的过程中添加离MST最近的未加入MST顶点，而Dijkstra算法的核心在于每次迭代的过程中添加离起点最近的未加入SPT的顶点**（其中MST指的是最小生成树，SPT指的是最短路径树）。
 
 在Prim算法中，我们最重要的操作就是`visit()`：我们每次向最小生成树MST加入一个顶点之后，就会通过它的所有邻边去更新剩余未加入顶点到MST的距离信息distTo[]和edgeTo[]（distTo[]也必然是在索引最小优先队列IndexMinPQ之中）。完成这些更新操作之后，Prim算法就会从队列中取出下一个最小顶点重复上面的操作。这里的`visit()`操作的本质就是①加入一个顶点和②更新剩余的顶点信息
 
@@ -1803,11 +1805,303 @@ public class AcyclicLP {
 
 
 
-#### 4.4.3 Bellman_Ford算法(一般加权有向图)
+#### 4.4.3 Bellman-Ford算法(一般加权有向图)
 
-算法所需时间和$EV$成正比空间与$V$成正比。
+##### 4.4.3.1  通用Bellman-Ford算法
+
+Bellman-Ford算法主要是用来解决一般加权有向图中的最短路径问题。算法核心思想为：在任意含有V个顶点的加权有向图中给定起点s，从s无法到任何负权重环，则我们可以通过如下的方式计算单点最短路径问题：**将s->s的距离权重distT[s]初始化为0.0，其他的distTo[]元素初始化为无穷大，然后以任意顺序对有向图中的所有边进行发送`relax`操作，重复V轮。**
+
+因此我们很容易的就可以推断出这样的算法的时间复杂度为：$EV$，空间复杂度为：$V$。我们可以按照这个算法进行实现，因为它没有任何严格的预处理、处理顺序的要求，代码如下：
+
+```java
+import edu.princeton.cs.algs4.DirectedEdge;
+import edu.princeton.cs.algs4.EdgeWeightedDigraph;
+import edu.princeton.cs.algs4.In;
+import edu.princeton.cs.algs4.StdOut;
+
+import java.util.Arrays;
+import java.util.Stack;
+
+public class BellmanFordSP {
+    private double[] distTo;
+    private DirectedEdge[] edgeTo;
+
+    //对指定的边进行松弛操作
+    private void relax(DirectedEdge e) {
+        int w = e.to(), v = e.from();
+        if (distTo[w] > distTo[v] + e.weight()) {
+            distTo[w] = distTo[v] + e.weight();
+            edgeTo[w] = e;
+        }
+    }
+
+    //算法正常执行的前提是没有负权重环
+    public BellmanFordSP(EdgeWeightedDigraph G, int s) {
+        distTo = new double[G.V()];
+        edgeTo = new DirectedEdge[G.V()];
+        Arrays.fill(distTo, Double.POSITIVE_INFINITY);
+
+        //VE次执行松弛操作
+        distTo[s] = 0.0;
+        for (int v = 0; v < G.V(); ++v)
+            for (DirectedEdge e : G.edges())
+                relax(e);
+    }
+
+    public boolean hasPathTo(int v) {
+        return distTo[v] < Double.POSITIVE_INFINITY;
+    }
+
+    public double distTo(int v) {
+        return distTo[v];
+    }
+
+    public Iterable<DirectedEdge> pathTo(int v) {
+        if (!hasPathTo(v)) return null;
+        Stack<DirectedEdge> stack = new Stack<DirectedEdge>();
+        for (DirectedEdge e = edgeTo[v]; e != null; e = edgeTo[e.from()])
+            stack.push(e);
+        return stack;
+    }
+
+    public static void main(String[] args) {
+        In in = new In(args[0]);
+        int s = Integer.parseInt(args[1]);
+        EdgeWeightedDigraph G = new EdgeWeightedDigraph(in);
+
+        BellmanFordSP sp = new BellmanFordSP(G, s);
+
+        for (int v = 0; v < G.V(); v++) {
+            if (sp.hasPathTo(v)) {
+                StdOut.printf("%d to %d (%5.2f)  ", s, v, sp.distTo(v));
+                for (DirectedEdge e : sp.pathTo(v))
+                    StdOut.print(e + "   ");
+                StdOut.println();
+            } else {
+                StdOut.printf("%d to %d           no path\n", s, v);
+            }
+        }
+    }
+}
+```
+
+负权重环对加权有向图计算最短路径的影响：若一个一般性加权有向图中出现了负权重环，那么这样的图中显然是计算不出最终的最短路径，因为我们完全可以在其中的路径中通过无限次绕着这个负权重环来无限的趋于负无穷，最终得到任意数目的更短路径。因此在对一个一般加权有向图计算最短路径的时候一定要检测其中是否存在负权重环。若图中不存在负权重环，则我们就可以使用Bellman-Ford算法来计算最短路径。
 
 
 
+#####  4.4.3.2  基于队列的Bellman-Ford算法
 
+基于队列的Bellman-Ford算法不再粗暴的采用一个双重循环，而是基于一个基本事实：只有上一轮中的distTo[]值发生变化的顶点指出的边才能够改变其他distTo[]元素的值。它的意思就是说，**对于一个顶点w以及它的距离权重distTo[w]，只有在它的指入父亲顶点的distTo[v]发生改变的前提下才会发生改变，否则再多次的循环也对这个顶点最短路径的正确指入边没什么影响**。因此我们可以改进随机进行relax操作的Bellman-Ford算法，将其改成按照一定的“由父到子”的顺序（这里处理为队列顺序）执行relax操作。这样就可以加快最短路径算法的执行速度。（**其实你可以发现这种思想就是广度优先遍历BFS算法**，但不同的是这里的顶点可能被重新加入队列之中，被重新加入的原因只有一个，那就是图中有负权重边）
+
+不过此时的时间复杂度仍然是：$EV$，空间复杂度为：$V$。
+
+```java
+import edu.princeton.cs.algs4.*;
+import edu.princeton.cs.algs4.DirectedEdge;
+
+import java.util.Arrays;
+import java.util.Stack;
+
+public class BellmanFordSPQ {
+    private double[] distTo;
+    private DirectedEdge[] edgeTo;
+    private Queue<Integer> queue;
+    private boolean[] onQ;
+
+    //对v->w进行松弛操作
+    private void relax(EdgeWeightedDigraph G, int v) {
+        for (DirectedEdge e : G.adj(v)) {
+            int w = e.to();
+            if (distTo[w] > distTo[v] + e.weight()) {
+                distTo[w] = distTo[v] + e.weight();
+                edgeTo[w] = e;
+                //若指出顶点没有在队列之中，那么就将其加入到队列中
+                if (!onQ[w]) {
+                    onQ[w] = true;
+                    queue.enqueue(w);
+                }
+            }
+        }
+    }
+
+    //正常执行的前提是该加权有向图中没有负权重环
+    public BellmanFordSPQ(EdgeWeightedDigraph G, int s) {
+        distTo = new double[G.V()];
+        edgeTo = new DirectedEdge[G.V()];
+        queue = new Queue<Integer>();
+        onQ = new boolean[G.V()];
+        Arrays.fill(distTo, Double.POSITIVE_INFINITY);
+
+        /* 这里所用的算法思想（在图中不存在负权重环情况下）就是
+            广度优先遍历BFS算法 */
+        distTo[s] = 0.0;
+        queue.enqueue(s);
+        while (!queue.isEmpty()) {
+            int v = queue.dequeue();
+            onQ[v] = false;
+            relax(G, v);
+        }
+    }
+
+    public boolean hasPathTo(int v) {
+        return distTo[v] < Double.POSITIVE_INFINITY;
+    }
+
+    public double distTo(int v) {
+        return distTo[v];
+    }
+
+    public Iterable<DirectedEdge> pathTo(int v) {
+        if (!hasPathTo(v)) return null;
+        Stack<DirectedEdge> stack = new Stack<DirectedEdge>();
+        for (DirectedEdge e = edgeTo[v]; e != null; e = edgeTo[e.from()])
+            stack.push(e);
+        return stack;
+    }
+
+    public static void main(String[] args) {
+        In in = new In(args[0]);
+        int s = Integer.parseInt(args[1]);
+        EdgeWeightedDigraph G = new EdgeWeightedDigraph(in);
+        BellmanFordSPQ sp = new BellmanFordSPQ(G, s);
+
+        for (int v = 0; v < G.V(); v++) {
+            if (sp.hasPathTo(v)) {
+                StdOut.printf("%d to %d (%5.2f):  ", s, v, sp.distTo(v));
+                for (DirectedEdge e : sp.pathTo(v))
+                    StdOut.print(e + "   ");
+                StdOut.println();
+            } else {
+                StdOut.printf("%d to %d           no path\n", s, v);
+            }
+        }
+    }
+}
+```
+
+算法执行过程图示：
+
+<img src="image/2020-11-28 111620.png" alt="2020-11-28 111620" style="zoom:67%;" />
+
+
+
+##### 4.4.3.3  负权重环检测
+
+在上面的讨论中我们已经提到过加权有向图中负权重环的存在会严重的影响最短路径的计算（对于上面没有负权重环检测能力的基于队列的Bellman-Ford算法，若用来计算一个含有负权重环有向图的话会陷入一个死循环）。因此我们必须在图最短路径计算的过程中需要证明负权重环的存在性。若存在则没有最短路径，我们此时应该从循环中退出并得到那个环的具体路径；否则我们可以获得最短路径树SPT。
+
+对于负权重环的检测我们直接使用书中的结论：若将所有边放松V轮之后当且仅当队列非空时有向图中才存在从起点可达的负权重环。也就是说我们没调用V次relax()操作就应该检查下当前找到的最短路径树SPT中是否存在负权重环（这里只要检测到有环就必然是负权重环的，因为只有负权重环才会让一个最短路径树SPT从一点又回到自己本身）
+
+```java
+import edu.princeton.cs.algs4.*;
+import edu.princeton.cs.algs4.DirectedEdge;
+
+import java.util.Arrays;
+import java.util.Stack;
+
+public class BellmanFordSPQ1 {
+    private double[] distTo;
+    private DirectedEdge[] edgeTo;
+    private Queue<Integer> queue;
+    private boolean[] onQ;
+    private Iterable<DirectedEdge> cycle;
+    private int count;
+
+    //松弛操作
+    private void relax(EdgeWeightedDigraph G, int v) {
+        for (DirectedEdge e : G.adj(v)) {
+            int w = e.to();
+            if (distTo[w] > distTo[v] + e.weight()) {
+                distTo[w] = distTo[v] + e.weight();
+                edgeTo[w] = e;
+                if (!onQ[w]) {
+                    queue.enqueue(w);
+                    onQ[w] = true;
+                }
+            }
+            //每V轮就调用一次findNegativeCycle()检测负权重环的存在
+            if (++count % G.V() == 0)
+                findNegativeCycle();
+        }
+    }
+
+    //在Bellman-Ford算法当前找到的最短路径树SPT中寻找负权重环（使用深度优先遍历算法DFS）
+    private void findNegativeCycle() {
+        int V = edgeTo.length;
+        EdgeWeightedDigraph spt = new EdgeWeightedDigraph(V);
+        for (int v = 0; v < V; ++v)
+            if (edgeTo[v] != null)
+                spt.addEdge(edgeTo[v]);
+
+        EdgeWeightedDirectedCycle finder = new EdgeWeightedDirectedCycle(spt);
+        cycle = finder.cycle();
+    }
+
+    public BellmanFordSPQ1(EdgeWeightedDigraph G, int s) {
+        distTo = new double[G.V()];
+        edgeTo = new DirectedEdge[G.V()];
+        queue = new Queue<Integer>();
+        onQ = new boolean[G.V()];
+        Arrays.fill(distTo, Double.POSITIVE_INFINITY);
+
+        distTo[s] = 0.0;
+        queue.enqueue(s);
+        onQ[s] = true;
+        while (!queue.isEmpty() && !hasNegativeCycle()) {
+            int v = queue.dequeue();
+            onQ[v] = false;
+            relax(G, v);
+        }
+    }
+
+    public boolean hasPathTo(int v) {
+        return distTo[v] < Double.POSITIVE_INFINITY;
+    }
+
+    public double distTo(int v) {
+        return distTo[v];
+    }
+
+    public Iterable<DirectedEdge> pathTo(int v) {
+        if (!hasPathTo(v)) return null;
+        Stack<DirectedEdge> stack = new Stack<DirectedEdge>();
+        for (DirectedEdge e = edgeTo[v]; e != null; e = edgeTo[e.from()])
+            stack.push(e);
+        return stack;
+    }
+
+    public boolean hasNegativeCycle() {
+        return cycle != null;
+    }
+
+    public Iterable<DirectedEdge> negativeCycle() {
+        return cycle;
+    }
+
+    public static void main(String[] args) {
+        In in = new In(args[0]);
+        int s = Integer.parseInt(args[1]);
+        EdgeWeightedDigraph G = new EdgeWeightedDigraph(in);
+        BellmanFordSPQ1 sp = new BellmanFordSPQ1(G, s);
+
+        if (sp.hasNegativeCycle()) {
+            StdOut.println("Negative Cycle: ");
+            for (DirectedEdge e : sp.negativeCycle())
+                StdOut.print(e + "  ");
+            StdOut.println();
+        } else {
+            for (int v = 0; v < G.V(); v++) {
+                if (sp.hasPathTo(v)) {
+                    StdOut.printf("%d to %d (%5.2f)  ", s, v, sp.distTo(v));
+                    for (DirectedEdge e : sp.pathTo(v)) {
+                        StdOut.print(e + "   ");
+                    }
+                    StdOut.println();
+                } else {
+                    StdOut.printf("%d to %d           no path\n", s, v);
+                }
+            }
+        }
+    }
+}
+```
 
