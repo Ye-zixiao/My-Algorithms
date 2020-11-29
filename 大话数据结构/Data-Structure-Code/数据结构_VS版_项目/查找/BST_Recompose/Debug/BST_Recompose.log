@@ -1,6 +1,0 @@
-﻿  BST_Recompose.c
-C:\Users\yexin\Desktop\数据结构\Data_structure Source Files\数据结构_VS版_项目\查找\BST_Recompose\BST_Recompose.c(23,6): error C2054:  在“／／中序遍历”之后应输入“(”
-C:\Users\yexin\Desktop\数据结构\Data_structure Source Files\数据结构_VS版_项目\查找\BST_Recompose\BST_Recompose.c(23,30): error C2085:  “is_emptyBST”: 不在形参表中
-C:\Users\yexin\Desktop\数据结构\Data_structure Source Files\数据结构_VS版_项目\查找\BST_Recompose\BST_Recompose.c(26,1): error C2085:  “main”: 不在形参表中
-C:\Users\yexin\Desktop\数据结构\Data_structure Source Files\数据结构_VS版_项目\查找\BST_Recompose\BST_Recompose.c(26,1): error C2143:  语法错误: 缺少“;”(在“{”的前面)
-C:\Users\yexin\Desktop\数据结构\Data_structure Source Files\数据结构_VS版_项目\查找\BST_Recompose\BST_Recompose.c(99,30): warning C4020:  “Delete_BST_Element”: 实参太多

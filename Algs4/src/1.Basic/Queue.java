@@ -1,7 +1,6 @@
 import edu.princeton.cs.algs4.StdOut;
 
 import java.util.Iterator;
-import java.util.List;
 
 public class Queue<Item> implements Iterable<Item> {
     private Node first;
