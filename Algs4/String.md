@@ -1,4 +1,4 @@
-## 5.字符串
+## 5. 字符串
 
 ### 5.1 字符串排序
 
@@ -402,6 +402,8 @@ int main() {
 
 <img src="image/2020-12-02 141539.png" alt="2020-12-02 141539" style="zoom:80%;" />
 
+这种数据结构的关键原理在于：让每一个单词的字符挂接在基于字符集的R（拓展ASCII为256）叉树上，若树上的某一个字符所对应的值非null，那么表示该字符与之前路径上所有字符组成的字符串存在，且对应值就是这个字符结点所对应的值。
+
 ```java
 import edu.princeton.cs.algs4.Queue;
 import edu.princeton.cs.algs4.StdOut;
@@ -557,5 +559,314 @@ public class TrieST<Value> {
 
 
 
-单词查找树性质：
+##### 5.2.1.1  相关操作分析
+
+###### 5.2.1.1.1  插入操作
+
+为了达到插入的目的，我们必须解决先前路径上的字符结点不存在的问题。若先前路径上的字符结点不存在，虽然我们不会为这样的结点赋值，但是我还是必须要创建这样的结点。再创建之后必须检查字符的长度是否与指定插入键字符串的长度相同，若是则将值赋予；否则递归处理到下一个结点（若先前的结点是新建的，那么下一个结点也必然需要新创建）。
+
+```java
+	private Node put(Node x, String key, Value val, int d) {
+        if (x == null) x = new Node();//若当前字符结点不存在，则新建
+        if (d == key.length()) {	  //若到达了指定的字符结点，则赋值
+            x.val = val;
+            return x;
+        }
+									//否则递归处理到下一个结点再处理
+        char c = key.charAt(d);
+        x.next[c] = put(x.next[c], key, val, d + 1);
+        return x;
+    }
+
+	public void put(String key, Value val) {
+        root = put(root, key, val, 0);
+    }
+```
+
+下面演示了一个简单单词查找树的构造过程：
+
+<img src="image/2020-12-03 092844.png" alt="2020-12-03 092844" style="zoom:67%;" />
+
+
+
+###### 5.2.1.1.2  查找操作
+
+查找操作和插入操作类似，也是使用递归，我们可以用下面一个简单的算法指示完成相应的操作：
+
+```
+NodeType get(NodeType x, Key key):
+	若当前结点 ==null: 返回null
+	
+	若当前结点复合要求: 返回当前结点
+	否则 get(x.next[c], key)
+```
+
+实际真正的代码如下，在这里结点是否符合要求完全依赖的是字符串的长度是否等于先前路径上字符的个数，若相等，我们直接返回这个结点并不管这个结点的值是否为null，是否是null这个工作可以交给下面的封装函数完成。
+
+```java
+	private Node get(Node x, String key, int d) {
+        if (x == null) return null;
+        if (d == key.length()) return x;
+
+        char c = key.charAt(d);
+        return get(x.next[c], key, d + 1);
+    }
+
+	public Value get(String key) {
+        Node x = get(root, key, 0);
+        if (x == null) return null;
+        return (Value) x.val;
+    }
+```
+
+下面演示了一些实际的查找过程：
+
+<img src="image/2020-12-03 093943.png" alt="2020-12-03 093943" style="zoom:67%;" />
+
+
+
+###### 5.3.1.1.3  删除操作
+
+删除操作实际上很简单，只需要将单词查找树中对应字符串最后一个字符的结点的值设置为null即可，不过若这个结点在删除之前就没有任何子结点，那么就需要对这个结点本身以及其父字符结点+祖先结点中不再有孩子的结点（且自己本身的值为null）沿路径向上一并删除，这里主要由递归的return返回null起作用。（**这里的套路与左倾红黑树中的删除方法相同！**🤓）
+
+```java
+    private Node delete(Node x, String key, int d) {
+        if (x == null) return null;
+        
+        //1、若当前结点即是指定结点，则值置为null
+        if (d == key.length())
+            x.val = null;
+        //2、否则，递归查找
+        else {
+            char c = key.charAt(d);
+            x.next[c] = delete(x.next[c], key, d + 1);
+        }
+
+        /* 置结点值为null后，在返回的路径上对每一个字符结点
+        	进行处理。将没有子结点且自己的值为null的结点删除 */
+        if (x.val != null) return x;
+        for (char c = 0; c < R; c++)
+            if (x.next[c] != null) return x;
+        return null;
+    }
+
+    public void delete(String key) {
+        root = delete(root, key, 0);
+    }
+```
+
+下图展示了一个指定字符串删除的递归前、低轨到指定字符结点将其值置为null以及递归返回的过程中沿路径向上对结点的尾后处理过程：
+
+<img src="image/2020-12-03 104909.png" alt="2020-12-03 104909" style="zoom:67%;" />
+
+
+
+###### 5.2.1.1.3  返回具有指定前缀键
+
+返回具有指定前缀键的作用就是可以将一个单词查找树中存储的具有指定前缀的字符串加入到一个容器之中，然后将这个容器的引用进行返回。在上述类中对应的方法就是`keyWithPrefix()`。
+
+为了完成这一目标我们引入了一个收集函数`collect()`，它是一个类中的私有辅助方法，它可以从指定的字符结点开始将路径上（直到最后的末尾）具有指定前缀的、且存在于单词查找树中的字符串加入到一个容器之中。这里使用的方法仍然是递归！下面的算法指示描述了这个递归方法的范式：
+
+```
+NodeType collect(NodeType x, Key key, Queue queue):
+	若当前结点 == null: return
+	
+	若当前结点值非空: 加入这个结点前面路径所有字符组成的字符串到容器之中
+	否则 collcet(x.next[c], key, queue)
+```
+
+根据上面这个`collect()`辅助方法我们可以轻易的让封装函数将单词查找树的根结点root和前缀字符串、容器传入到这个方法之中，最终通过递归将所有符合的字符串加入到容器之中，从而返回具有指定前缀键的容器引用。
+
+更进一步，若我们向这个函数传入的前缀字符串是一个空字符串""，那么我们就可以让`keyWithPrefix()`方法实际返回单词查找树中的所有字符串键！我们将这个方法命名为`keys()`。
+
+```java
+    private void collect(Node x, String pre, Queue<String> queue) {
+        if (x == null) return;
+        if (x.val != null) queue.enqueue(pre);
+        for (char c = 0; c < R; c++)
+            collect(x.next[c], pre + c, queue);
+    }
+
+	//返回所有单词查找树中存在的具有指定前缀的字符串键
+    public Iterable<String> keysWithPrefix(String pre) {
+        Queue<String> queue = new Queue<String>();
+        collect(get(root, pre, 0), pre, queue);
+        return queue;
+    }
+
+	//返回所有单词查找树中存在的字符串键
+    public Iterable<String> keys() {
+        return keysWithPrefix("");
+    }
+```
+
+下图演示了一次对具有指定前缀“sh”的字符串查找：
+
+<img src="image/2020-12-03 100139.png" alt="2020-12-03 100139" style="zoom:67%;" />
+
+
+
+###### 5.2.1.1.4  通配符匹配
+
+通配符匹配的思想其实也很简单，类似于上面的查找过程。例如对于一个单词查找树{"shell","she","what"}，我们试图从中找出符合下面通配符字符串，即pattern，“shel..”，那么我们必然知道指定通配符需要查找的字符串长度必然与统配字符串的长度相同（这里为5）！，显然我们只需要沿着前面“she”字符串前缀找剩下路径中长度为5的字符结点，若这个结点的值非空，那么将其加入到实现安排的容器之中即可，否则不加入。我们可以用如下的伪代码指示这一过程：
+
+```
+NodeType collect(NodeType x, String pattern, Queue queue):
+	若当前结点为空: return
+	
+	若当前结点表示字符串长度与通配模式字符串长度相同 && 结点值非空:
+		将这个字符串加入到容器之中
+	若当前结点表示的字符串长度与通配模式字符串长度相同但结点值为空:
+		return
+	对当前结点中符合要求下一个字符要求的子结点:
+		collect(x.next[c], pattern, queue)
+```
+
+具体的代码如下所示：
+
+```java
+    private void collect(Node x, String pre, String pat, Queue<String> queue) {
+        int d = pre.length();
+        if (x == null) return;
+        if (d == pat.length() && x.val != null)
+            queue.enqueue(pre);
+        if (d == pat.length()) return;
+
+        char next = pat.charAt(d);
+        for (char c = 0; c < R; c++)
+            if (next == '.' || next == c)
+                collect(x.next[c], pre + c, pat, queue);
+    }
+
+    public Iterable<String> keysThatMatch(String pat) {
+        Queue<String> queue = new Queue<String>();
+        collect(root, "", pat, queue);
+        return queue;
+    }
+```
+
+
+
+######  5.2.1.15  最长前缀
+
+最长前缀问题指的是给定一个字符串从单词查找树中找出最长的前缀，且这个前缀字符串本身也存储于单词查找树中，一种最特别的情况就是给定字符串本身就是最大前缀，那么可以料想这个单词字符串本身也必然是存储于单词查找树中。
+
+解决这个问题的最好方法仍然是递归，不过递归方法的目的是为了找到那个最长前缀字符串的长度，而不是直接获取最长前缀字符串。这个递归式有如下几种情况需要处理：①若当前结点为空，则返回之前保存的最长前缀字符串长度；②若当前结点非空，则将保存的最长前缀字符串长度修改为当前字符串的长度；③若当前结点的长度已经等于指定字符串的长度，则直接返回这个保存的最长前缀字符串长度；④剩下的情况就是递归了。算法流程如下所示：
+
+```
+int search(NodeType x, String s, int d, int length):
+	若当前结点为空: return length
+	
+	若当前结点值非空: 修改length长度
+	若当前结点表示的字符串长度等于查找字符串的长度: return length 
+	return search(x.next[c], s, d, length)
+```
+
+```java
+    private int search(Node x, String s, int d, int length) {
+        if (x == null) return length;
+        if (x.val != null) length = d;
+        if (d == s.length()) return length;
+        char c = s.charAt(d);
+        return search(x.next[c], s, d + 1, length);
+    }
+
+    public String longestPrefixOf(String s) {
+        int length = search(root, s, 0, 0);
+        return s.substring(0, length);
+    }
+```
+
+
+
+##### 5.2.1.2 单词查找树性质
+
+- 会命中的查找在单词查找树中所访问的字符结点数最多为键的长度+1，而与单词查找树中键的数量无关；
+- 不会命中的查找在单词查找树中的随机模型中需要访问$~log_R{N}$（$N$表示总随机键数，$R$表示所基于的字符数量）个字符节点数，也就是说查找未命中的成本与键的长度无关；
+- 一棵单词查找树中的链接总数在$RN$到$RNw$之间，其中$w$为键的平均长度。这意味着所有键比较短时，链接的总数接近于$RN$；当所有键比较长时，链接的总数接近于$RNw$。所以缩小$R$可以节省大量的空间。
+
+总结就是：**命中查找时间成本与字符串的长度有关，而未命中查找时间成本与单词查找树中的键数量有关；而整个单词查找树的空间成本与键的数量、所基于字符集中的字符数量有关**。
+
+
+
+#### 5.2.2 三向单词查找树
+
+三向单词查找树可以认为是R向单词查找树的紧凑表示，其最大的好处在于可以很好的解决R向单词查找树所允许空间严重依赖于字符集中的字符R数量而造成的巨大空间需求。在三向单词查找树中，每个结点都含有一个字符、三条链接和一个值。这3条链接分别对应着当前字符小于、等于和大于结点字母的所有键。按照我们R向单词查找树的实现我们可以很好的完成上述数据结构的实现：
+
+```java
+public class TST<Value> {
+    private Node root;
+
+    private class Node {
+        char c;
+        Node left, mid, right;
+        Value val;
+    }
+
+    private Node get(Node x, String key, int d) {
+        if (x == null) return null;
+
+        char c = key.charAt(d);
+        if (c < x.c)
+            return get(x.left, key, d);
+        else if (c > x.c)
+            return get(x.right, key, d);
+        else if (d < key.length() - 1)
+            return get(x.mid, key, d + 1);
+        else return x;
+    }
+
+    public Value get(String key) {
+        Node x = get(root, key, 0);
+        if (x == null) return null;
+        else return (Value) x.val;
+    }
+
+    private Node put(Node x, String key, Value val, int d) {
+        char c = key.charAt(d);
+        if (x == null) {
+            x = new Node();
+            x.c = c;
+        }
+
+        if (c < x.c)
+            x.left = put(x.left, key, val, d);
+        else if (c > x.c)
+            x.right = put(x.right, key, val, d);
+        else if (d < key.length() - 1)
+            x.mid = put(x.mid, key, val, d + 1);
+        else x.val = val;
+        return x;
+    }
+
+    public void put(String key, Value val) {
+        root = put(root, key, val, 0);
+    }
+}
+```
+
+三向单词查找树的形状如下：
+
+<img src="image/2020-12-03 115705.png" alt="2020-12-03 115705" style="zoom:67%;" />
+
+对于三向单词查找树有如下的性质：
+
+- 由$N$个平均长度为$w$的字符串构造的三向单词查找树中的链接总数在$3N$到$3Nw$之间；
+- 在一棵由$N$个随机字符串构造的三向单词查找树中，查找未命中平均需要比较字符$~InN$次。除了$~InN$次外，一次插入或命中的查找会比较一次被查找的键中的每个字符。
+
+
+
+**各种字符串查找算法的性能比较**：
+
+|       算法(数据结构)       | 未命中查找检查的字符数量 |        内存使用        |             优点             |
+| :------------------------: | :----------------------: | :--------------------: | :--------------------------: |
+|      二叉树查找(BST)       |       $c_1(lgN)^2$       |         $64N$          |      适用于随机排列的键      |
+|     2-3树查找(红黑树)      |       $c_2(lgN)^2$       |         $64N$          |          有性能保障          |
+|    线性探测法(并行数组)    |           $w$            |      $32N$~$128N$      |     内置类型，缓存散列值     |
+| 字典树查找(R向单词查找树)  |        $log_R{N}$        | $(8R+56)N$~$(8R+56)Nw$ | 适用于较短的键和较小的字母表 |
+| 字典树查找(三向单词查找树) |        $1.39lgN$         |      $64N$~$64Nw$      |       适用于非随机的键       |
+
+
+
+### 5.3 子字符串查找
 

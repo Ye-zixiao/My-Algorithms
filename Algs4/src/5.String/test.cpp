@@ -1,25 +1,40 @@
-#include <string>
-#include <iostream>
-#include <vector>
-
-
-class Test {
+/*
+// Definition for a Node.
+class Node {
 public:
-    explicit Test(int val) :
-        value(val) {}
+    int val;
+    vector<Node*> children;
 
-    int get() const {
-        return value;
+    Node() {}
+
+    Node(int _val) {
+        val = _val;
     }
 
-private:
-    int value;
+    Node(int _val, vector<Node*> _children) {
+        val = _val;
+        children = _children;
+    }
 };
+*/
 
+class Solution {
+public:
+    vector<int> preorder(Node* root) {
+        stack<Node*> nodeStack;
+        vector<int> ivec;
+        Node* temp;
 
-int main(void)
-{
-    Test test(42);
-    std::cout << test.get() << std::endl;
-    return 0;
-}
+        if (root != nullptr) {
+            nodeStack.push(root);
+            while (!nodeStack.empty()) {
+                temp = nodeStack.top();
+                nodeStack.pop();
+                ivec.push_back(temp->val);
+                for (int i = temp->children.size() - 1;i >= 0;--i)
+                    nodeStack.push(temp->children[i]);
+            }
+        }
+        return ivec;
+    }
+};
