@@ -870,3 +870,172 @@ public class TST<Value> {
 
 ### 5.3 子字符串查找
 
+#### 5.3.1  暴力子字符串查找算法
+
+```java
+import edu.princeton.cs.algs4.StdOut;
+
+public class StrSearch {
+    public static int BFSearch(String txt, String pat) {
+        int M = txt.length(), N = pat.length();
+        for (int i = 0; i <= M - N; ++i) {
+            int j;
+            //并不显式的回溯跟踪文本串的下标
+            for (j = 0; j < N; ++j)
+                if (txt.charAt(i + j) != pat.charAt(j))
+                    break;
+            if (j == N) return i;
+        }
+        return -1;
+    }
+
+    public static int BFSearch1(String txt, String pat) {
+        int i, M = txt.length();
+        int j, N = pat.length();
+        for (i = 0, j = 0; i < M && j < N; ++i) {
+            if (txt.charAt(i) == pat.charAt(j)) ++j;
+            else {
+                /* 若未匹配成功，显式回溯跟踪文本串的下标，
+                    并复位跟踪匹配模式串的下标 */
+                i -= j;
+                j = 0;
+            }
+        }
+        if (j == N) return i - N;
+        else return -1;
+    }
+
+    public static void main(String[] args) {
+        String txt = "hello world", pat = "world";
+        StdOut.println(BFSearch1(txt, pat));
+        StdOut.println(txt.substring(BFSearch1(txt, pat)));
+    }
+}
+```
+
+
+
+#### 5.3.2  KMP匹配算法
+
+因为算法4中使用的有限状态自动机的方式来讲解KMP算法，我个人不是很喜欢那种理解方式，所以采用一般算法书籍中常用的“最大公共前后缀计算”的方式来讲解这一内容。至于书中对于有限状态机的java实现放在最后（不做介绍），这里使用c++实现来展示实际的代码。
+
+
+
+C++实现：
+
+```c++
+#include <iostream>
+#include <string>
+#include <vector>
+using namespace std;
+
+//计算模式字符串的最大公共前缀表
+void prefix_table(const string &pattern, int prefix[], int n) {
+	int len = 0, i = 1;
+	prefix[0] = 0;
+	while (i < n) {
+		if (pattern[i] == pattern[len]) {
+			len++;
+			prefix[i] = len;
+			i++;
+		} else {
+			/* 若当前最大公共前后缀无法虽然i的增加而增长，而退而寻找它之前的
+			 * 第二大公共前后缀字符串，若当len为0时也找不到则直接将最大公共
+			 * 前后缀数组prefix中的当前位置设置为0即可 */
+			if (len > 0)
+				len = prefix[len - 1];
+			else {
+				prefix[i] = len;
+				i++;
+			}
+		}
+	}
+}
+
+//向后移动一位最大公共前缀表，并将第0位设置为-1
+void move_prefix(int prefix[], int n) {
+	for (int i = n - 1; i > 0; --i)
+		prefix[i] = prefix[i - 1];
+	prefix[0] = -1;
+}
+
+//kmp算法执行子字符串查找
+int kmp_search(const string &txt, const string &pat) {
+	int i, M = txt.size();
+	int j, N = pat.size();
+	int *next = new int[N];
+	prefix_table(pat, next, N);
+	move_prefix(next, N);
+
+	for (i = 0, j = 0; i < M && j < N;) {
+		if (txt[i] == pat[j]) {
+			i++;
+			j++;
+		} else {
+			j = next[j];
+			if (j == -1) {
+				j = 0;
+				i++;
+			}
+		}
+	}
+	delete[] next;
+	if (j == N)
+		return i - N;
+	else
+		return -1;
+}
+
+int main() {
+	string txt("hello world"), pat("world");
+	cout << kmp_search(txt, pat) << endl;
+	cout << txt.substr(kmp_search(txt, pat), pat.size()) << endl;
+	return 0;
+}
+```
+
+
+
+
+
+java实现：
+
+```java
+import edu.princeton.cs.algs4.StdOut;
+
+public class KMPSubStrSearch {
+    private String pat;
+    private int[][] dfa;
+
+    public void KMP(String pat) {
+        this.pat = pat;
+        int M = pat.length();
+        int R = 256;
+        dfa = new int[R][M];
+        dfa[pat.charAt(0)][0] = 1;
+        for (int X = 0, j = 1; j < M; j++) {
+            for (int c = 0; c < R; c++)
+                dfa[c][j] = dfa[c][X];
+            dfa[pat.charAt(j)][j] = j + 1;
+            X = dfa[pat.charAt(j)][X];
+        }
+    }
+
+    public int search(String txt, String pat) {
+        KMP(pat);
+        int i, j, N = txt.length(), M = pat.length();
+        for (i = 0, j = 0; i < N && j < M; i++)
+            j = dfa[txt.charAt(i)][j];
+        if (j == M) return i - M;
+        else return -1;
+    }
+
+    public static void main(String[] args) {
+        String txt = "hello world", pat = "world";
+        KMPSubStrSearch kmpSubStrSearch = new KMPSubStrSearch();
+
+        StdOut.println(kmpSubStrSearch.search(txt, pat));
+        StdOut.println(txt.substring(kmpSubStrSearch.search(txt, pat)));
+    }
+}
+```
