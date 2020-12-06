@@ -872,6 +872,10 @@ public class TST<Value> {
 
 #### 5.3.1  暴力子字符串查找算法
 
+时间复杂度：$NM$
+
+空间复杂度：$N+M$
+
 ```java
 import edu.princeton.cs.algs4.StdOut;
 
@@ -917,11 +921,13 @@ public class StrSearch {
 
 #### 5.3.2  KMP匹配算法
 
-因为算法4中使用的有限状态自动机的方式来讲解KMP算法，我个人不是很喜欢那种理解方式，所以采用一般算法书籍中常用的“最大公共前后缀计算”的方式来讲解这一内容。至于书中对于有限状态机的java实现放在最后（不做介绍），这里使用c++实现来展示实际的代码。
+因为算法4中使用的有限状态自动机的方式来讲解KMP算法，我个人不是很喜欢那种理解方式，所以采用一般算法书籍中常用的“最大公共前后缀计算”的方式来讲解这一内容，并使用C++实现。
 
+> 在这里推荐一个up主讲解的视频：[KMP字符串匹配算法](https://www.bilibili.com/video/BV1Px411z7Yo?from=search&seid=13799977324547539020)
 
+时间复杂度：$N/M$~$NM$
 
-C++实现：
+空间复杂度：$N+M$
 
 ```c++
 #include <iostream>
@@ -996,46 +1002,56 @@ int main() {
 
 
 
+##### 5.3.2.1  最大公共前后缀
 
+众所周知，KMP算法的核心就是避免在文本串中的下标（指向当前待判的字符）在与模式字符串发生比较失败的时候进行回溯，防止不必要的重复比较。下面演示了KMP使用最大公共前后缀数组生成的next数组进行匹配时发生的前后两步：
 
-java实现：
+<img src="image/kmp (2).jpg" alt="kmp (2)" style="zoom:50%;" />
 
-```java
-import edu.princeton.cs.algs4.StdOut;
+<img src="image/kmp1.jpg" alt="kmp1" style="zoom:50%;" />
 
-public class KMPSubStrSearch {
-    private String pat;
-    private int[][] dfa;
+从上面的kmp匹配的过程中你可以看到文本串中的i在匹配的过程中并没有像暴力排序那样发生指针回溯的过程，其中两个最主要与BF算法不同的两个细节在于：①模式字符串pattern跳过了对文本串txt第2、3个字符开始的匹配；②模式字符串pattern中的下标j移动到了一个另一个位置。
 
-    public void KMP(String pat) {
-        this.pat = pat;
-        int M = pat.length();
-        int R = 256;
-        dfa = new int[R][M];
-        dfa[pat.charAt(0)][0] = 1;
-        for (int X = 0, j = 1; j < M; j++) {
-            for (int c = 0; c < R; c++)
-                dfa[c][j] = dfa[c][X];
-            dfa[pat.charAt(j)][j] = j + 1;
-            X = dfa[pat.charAt(j)][X];
-        }
-    }
+对于第一个细节，如此操作的理由在于：由于模式字符串和上面的文本字符串在最后一个a字符前面的部分已经执行过了比较，我们知道下面abaa中前三个字符aba与上面的abac中的aba相同，而模式字符串第一个字符a却与后面的b不相同，因此我们显然可以知道若按照暴力匹配，下一步的abaa与bacb比较必然在第一个字符就会失败。因此我们可以直接跳过这个字符，让abaa与acba进行比较。
 
-    public int search(String txt, String pat) {
-        KMP(pat);
-        int i, j, N = txt.length(), M = pat.length();
-        for (i = 0, j = 0; i < N && j < M; i++)
-            j = dfa[txt.charAt(i)][j];
-        if (j == M) return i - M;
-        else return -1;
-    }
+<img src="image/kmp2.jpg" alt="kmp2" style="zoom: 50%;" />
 
-    public static void main(String[] args) {
-        String txt = "hello world", pat = "world";
-        KMPSubStrSearch kmpSubStrSearch = new KMPSubStrSearch();
+对于第二个细节，如此操作的理由在于：由于根据上面的推断abaa现在应该让文本串中的acba进行比较，但是由于aba这个字符串有着最大公共前后缀“a”。因此上一步的abaa与abac比较已经可以让我们知道前缀“a”和acba的第一个字符a的比较也是可以跳过的！所以我们可以直接将j设置成最大前后缀后边字符的下标，即：j=len(当前j前面字符串的最大前后缀)。
 
-        StdOut.println(kmpSubStrSearch.search(txt, pat));
-        StdOut.println(txt.substring(kmpSubStrSearch.search(txt, pat)));
-    }
-}
+<img src="image/kmp3.jpg" alt="kmp3" style="zoom:50%;" />
+
+由上我们可以知道只要，只要我们计算出一个模式字符串的最大公共前后缀数组，我们可以使得在子字符串匹配的过程中只发生模式字符串中的下标j回退而不发生文本字符串下标i的回退。而真正绝对j到底回退到那个模式字符串数组中的哪一个位实际上取决于由最大公共前后缀数组prefix_table生成的next数组。其算法伪代码大致如下：
+
+```python
+def kmp(txt,pattern):
+	根据pattern生成最大公共前后缀数组prefix
+	进而由prefix生成next数组
+	
+	for i < txt.len && j < pattern.len:
+		#当前字符匹配成功
+		if txt[i] == pattern[j]:
+			i++
+            j++
+		#当前字符没有成功，试试模式串中最大公共前后缀后面开始的字符
+		#我们规定若next[j]等于-1表示这个当前字符串前面的部分没有
+		#最大公共前后缀，此时直接开始试文本串中下一个字符串，j复位
+		else
+			j = next[j]
+			if j == -1:
+            	i++, j = 0
+     
+	if j == pattern.len:
+    	return i - pattern.len#表示匹配成功
+    else return -1;
 ```
+
+
+
+##### 5.3.2.2  计算最大公共前后缀
+
+
+
+
+
+##### 5.3.2.3  计算next数组
+
