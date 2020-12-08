@@ -1028,10 +1028,8 @@ def kmp(txt,pattern):
 	进而由prefix生成next数组
 	
 	for i < txt.len && j < pattern.len:
-		#当前字符匹配成功
-		if txt[i] == pattern[j]:
-			i++
-            j++
+		if 当前字符与模式串中的字符相同:
+            i++, j++
 		#当前字符没有成功，试试模式串中最大公共前后缀后面开始的字符
 		#我们规定若next[j]等于-1表示这个当前字符串前面的部分没有
 		#最大公共前后缀，此时直接开始试文本串中下一个字符串，j复位
@@ -1041,7 +1039,7 @@ def kmp(txt,pattern):
             	i++, j = 0
      
 	if j == pattern.len:
-    	return i - pattern.len#表示匹配成功
+    	return i - pattern.len
     else return -1;
 ```
 
@@ -1049,9 +1047,175 @@ def kmp(txt,pattern):
 
 ##### 5.3.2.2  计算最大公共前后缀
 
+计算最大公共前后缀需要用到动态规划的思想。通过下面逐步计算最大公共前后缀数组的过程可以发现：当前最大公共前后缀的值可以通过前一个子字符串的结果进一步计算得到。
 
+例如**①**“aba”的下一个最大前缀前后缀值若想成为2，那么只需要比较位置为1的b和当前字符（aba后面的那个字符）是否相等，若相等则将前一个最大公共前后缀的值+1放置到当前位置；**②**否则用前面字符串的第二长公共前后缀字符串后的第一个字符与当前字符比较，若相同用这个第二公共前后缀字符串长度+1放置到当前prefix数组位置。例如”**aba**cd**aba**b“需要计算当前位置的prefix值，而“abacdaba”的最大公共前后缀为“aba”，既然当前的“b”与“aba”后面的“c”不相同，那么当前最大公共前后缀显然不能+1。只能退而求其次看看“abacdaba”的第二公共前后缀“a”后面的b是否与当前字符相同，显然这里是相同的，所以我们可以用第二公共前后缀长度1+1放置到当前的prefix之中。如果上面的都不成立，则继续比较第3大公共前后缀。。。直到没有子前后缀就从头比较。
+
+<img src="image/next.jpg" alt="next" style="zoom:50%;" />
+
+我们可以用下面的伪代码来描述这一算法：
+
+```
+def prefix(str,prefixArr):
+	prefixArr[0]
+	当前最大公共前后缀len=0
+	
+	while i < len(str):
+		if str[len] == str[i]:
+			将当前prefixArr的最大公共前后缀值设置为len+1
+			增加len、i
+		else
+			将len设置前面字符串的次公共前后缀长度
+			if 前面已经没有次公共前后缀:
+				prefixArr[i++] == 0
+```
+
+使用C++语言对此进行实现：
+
+```c++
+void prefix_table(const string &pattern, int prefix[], int n) {
+	int len = 0, i = 1;
+	prefix[0] = 0;
+    
+	while (i < n) {
+		if (pattern[i] == pattern[len]) {
+			len++;
+			prefix[i] = len;
+			i++;
+		}
+        else {
+			if (len > 0)
+				len = prefix[len - 1];
+			else
+				prefix[i++] = len;
+		}
+	}
+}
+```
 
 
 
 ##### 5.3.2.3  计算next数组
+
+只需要对上面的prefix数组每一个元素右移一位即可，不过第一个元素需要设置为-1，表示当前模式字符串第一个字符和文本字符串当前字符不相同，此时需要对文本字符串中的下标i+1，使得游标向前进一格。
+
+
+
+#### 5.3.2 Boyer-Moore字符串查找算法
+
+
+
+```java
+import edu.princeton.cs.algs4.StdOut;
+import java.util.Arrays;
+
+public class BoyerMoore {
+    private int[] right;
+    private String pat;
+
+    BoyerMoore(String pat) {
+        this.pat = pat;
+        int M = pat.length();
+        int R = 256;
+        right = new int[R];
+        Arrays.fill(right, -1);
+        for (int j = 0; j < M; j++)
+            right[pat.charAt(j)] = j;
+    }
+
+    public int search(String txt) {
+        int M = txt.length();
+        int N = pat.length();
+        int skip;
+
+        for (int i = 0; i <= M - N; i += skip) {
+            skip = 0;
+            for (int j = N - 1; j >= 0; j--)
+                if (pat.charAt(j) != txt.charAt(i + j)) {
+                    skip = j - right[txt.charAt(i + j)];
+                    if (skip < 1) skip = 1;
+                    break;
+                }
+            if (skip == 0) return i;
+        }
+        return -1;
+    }
+
+    public static void main(String[] args) {
+        String txt = "hello world", pat = "world";
+        BoyerMoore boyerMoore = new BoyerMoore(pat);
+        int b = boyerMoore.search(txt);
+        StdOut.println(b);
+        if (b != -1) StdOut.println(txt.substring(b));
+    }
+}
+```
+
+
+
+#### 5.3.3 Rabin-Karp指纹字符串查找算法
+
+```java
+import edu.princeton.cs.algs4.StdOut;
+
+import java.math.BigInteger;
+import java.util.Random;
+
+public class RobinKarp {
+    private long patHash;
+    private int M;
+    private long Q;
+    private int R = 256;
+    private long RM;
+
+    public RobinKarp(String pat) {
+        this.M = pat.length();
+        Q = longRandomPrime();
+        RM = 1;
+        for (int i = 1; i <= M - 1; i++)
+            RM = (R * RM) % Q;
+        patHash = hash(pat, M);
+    }
+
+    private static long longRandomPrime() {
+        BigInteger prime = BigInteger.probablePrime(31, new Random());
+        return prime.longValue();
+    }
+
+    public boolean check(int i) {
+        return true;
+    }
+
+    private long hash(String key, int M) {
+        long h = 0;
+        for (int j = 0; j < M; j++)
+            h = (R * h + key.charAt(j)) % Q;
+        return h;
+    }
+
+    public int search(String txt) {
+        int N = txt.length();
+        long txtHash = hash(txt, M);
+        if (patHash == txtHash && check(0)) return 0;
+        for (int i = M; i < N; ++i) {
+            txtHash = (txtHash + Q - RM * txt.charAt(i - M) % Q) % Q;
+            txtHash = (txtHash * R + txt.charAt(i)) % Q;
+            if (patHash == txtHash)
+                if (check(i - M + 1))
+                    return i - M + 1;
+        }
+        return -1;
+    }
+
+    public static void main(String[] args) {
+        String txt = "hello world", pat = "world";
+        RobinKarp robinKarp = new RobinKarp(pat);
+        int r = robinKarp.search(txt);
+        StdOut.println(r);
+        if (r != -1) StdOut.println(txt.substring(r));
+    }
+}
+```
+
+
 
