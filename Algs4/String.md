@@ -1101,9 +1101,39 @@ void prefix_table(const string &pattern, int prefix[], int n) {
 
 
 
-#### 5.3.2 Boyer-Moore字符串查找算法
+#### 5.3.3 Boyer-Moore字符串查找算法
+
+Boyer-Moore字符串查找算法的核心就是**基于模式串的字符集合生成一个字符不匹配时的跳跃表（辅助数组），这个表可以告诉程序在字符发生不匹配时文本串的下标该跳跃到哪一个位置，然后再开始从右向左的匹配**（注意：Boyer-Moore算法是从右向左开始匹配的）。虽然程序看起来文本串的下标i一直都是处在跳跃的状态，但实际上由于文本串中的字符是基于i+j进行匹配的，所以Boyer-Moore算法是存在文本串字符重复比较（即真正的回溯）的现象的。
 
 
+
+> 下面是以前不好的甚至是错误的观点：
+>
+> 与KMP算法类似，这些算法都是**基于模式字符串中生成一个辅助数组**（KMP中是next数组，告诉模式字符串在不匹配的时候下标该跳到哪里；对于Boyer-Moore数组指的是跳跃表，它用来告诉文本串在发生不匹配的时候该跳到哪个位置）**，并在发生字符不匹配的时候避免文本串下标回溯。两者的算法核心的不同在于：KMP利用的是模式串最大公共前后缀有无的特点，而Boyer-Moore利用的是当前未匹配成功的字符是否存在于模式字符串这一特点**。其表现形式的不同在于：KMP中下标跳跃的模式串中的下标（向前跳），而在Boyer-Moore算法中跳跃的是文本串中的下标（向后跳）。
+
+##### 5.3.3.1  跳跃的过程
+
+该算法的另一个特点在于它的比较过程是从右向左的，而不是从左向右的！在比较的过程中，若当前文本串中的字符和模式串中的字符不同，则需要通过如下的处理让文本串中的下标进行跳跃式步进，而模式串中的下标也可能发生更新：
+
+1. **若当前匹配文本串字符存在于模式串的字符集合中，且模式串当前位置-跳跃表查询结果>0，则让文本串下标增大这个差值**；
+2. **若当前匹配文本串字符存在于模式串的字符集合中，但模式串当前位置-跳跃表查询结果<0，则让文本串下标递增1步**；
+3. **若当前匹配文本串字符不存在于模式串的字符集合中，故跳跃表查询结果为-1，则让文本串下标递增1步**。
+
+下图展示了当前字符没有匹配成功，但该字符在模式串的字符集合之中，此时本文串下标跳跃的情况：
+
+<img src="image/2020-12-11 110925.png" alt="2020-12-11 110925" style="zoom: 67%;" />
+
+下图展示了当前字符没有匹配成功，且该字符不在模式串的字符集合之中，此时的文本串下标跳跃情况：
+
+<img src="image/2020-12-11 111216.png" alt="2020-12-11 111216" style="zoom:67%;" />
+
+##### 5.3.3.2  跳跃表的计算
+
+跳跃表其实就是一个字符集合数组，若模式字符串出现了哪一个字符（遍历时最后出现）就在相应的额下标位置上记录该字符在模式字符串中的下标即可。若没有出现则在数组中初始化-1即可。
+
+
+
+java代码实现：
 
 ```java
 import edu.princeton.cs.algs4.StdOut;
@@ -1113,6 +1143,7 @@ public class BoyerMoore {
     private int[] right;
     private String pat;
 
+    //计算跳跃表
     BoyerMoore(String pat) {
         this.pat = pat;
         int M = pat.length();
@@ -1126,11 +1157,19 @@ public class BoyerMoore {
     public int search(String txt) {
         int M = txt.length();
         int N = pat.length();
-        int skip;
+        int skip;//文本串需要向右步进的量
 
         for (int i = 0; i <= M - N; i += skip) {
             skip = 0;
             for (int j = N - 1; j >= 0; j--)
+                /* 若不匹配，则skip会被设置为正整数
+                 * 1. 一种情况是当前匹配的文本串字符存在于模式串字符集合中，
+                 *    且模式串当前位置-跳跃表查询得到的值>0；
+                 * 2. 一种情况是当前匹配的文本串字符存在于模式串字符集合中，
+                 *    但模式串当前位置-跳跃表查询得到的值<0；
+                 * 3. 一种情况是当前匹配的文本串字符不存在于模式串字符集合中，
+                 *    则查询跳跃表的结果<0。
+                 * */
                 if (pat.charAt(j) != txt.charAt(i + j)) {
                     skip = j - right[txt.charAt(i + j)];
                     if (skip < 1) skip = 1;
@@ -1149,11 +1188,85 @@ public class BoyerMoore {
         if (b != -1) StdOut.println(txt.substring(b));
     }
 }
+
+```
+
+下面展示了一次完整的匹配过程：
+
+<img src="image/2020-12-11 112850.png" alt="2020-12-11 112850" style="zoom:67%;" />
+
+C++实现：
+
+```c++
+#include <iostream>
+#include <string>
+#include <vector>
+using namespace std;
+
+static void jump_table(const string &pat, vector<int> &jump) {
+	fill(jump.begin(), jump.end(), -1);
+	for (int i = 0; i < pat.length(); ++i)
+		jump[i] = static_cast<int>(pat[i]);
+}
+
+int BoyerMooreSearch(const string &txt, const string &pat) {
+	int M = txt.size(), N = pat.size();
+	vector<int> jump(256);
+	int skip;
+
+	jump_table(pat, jump);
+	for (int i = 0; i < M - N; i += skip) {
+		skip = 0;
+		for (int j = N - 1; j >= 0; --j)
+			if (txt[i + j] != pat[j]) {
+				skip = jump[txt[i + j]];
+				if (skip < 1)
+					skip = 1;
+				break;
+			}
+		if (skip == 0)
+			return i;
+	}
+	return -1;
+}
+
+int main() {
+	string txt("talk is cheap, show me the code"), pat("show");
+	int res = BoyerMooreSearch(txt, pat);
+	cout << res << endl;
+	if (res >= 0)
+		cout << txt.substr(res, pat.size());
+
+	return 0;
+}
 ```
 
 
 
-#### 5.3.3 Rabin-Karp指纹字符串查找算法
+#### 5.3.4 Rabin-Karp指纹字符串查找算法
+
+Rabin-Karp算法是一种基于Hash函数的字符串查找算法。其核心思想就是：**计算模式字符串的Hash值，然后用相同的Hash函数计算文本中所有可能的M个字符长度的子字符串的Hash值并一一匹配。若匹配成功，则再进行一次检验**（可能两两计算使用更大质数得到的Hash值）**，然后返回对应的子字符串起始下标。**
+
+对于Hash值的计算主要是通过Horner算法逐位累加计算：
+$$
+当前字符串的Hash值=(上一个子字符串Hash值*R+当前位置字符值) \% Q
+$$
+而对于文本串中的Hash值是通过滑动窗口来计算得到的
+
+<img src="image/Rabnihash.jpg" alt="Rabnihash" style="zoom:50%;" />
+
+我们可以将其中一串子字符串的数值通过如下的表达式进行表达：
+$$
+x_i=t_iR^{M-1}+t_{i+1}R^{M-2}+...+t_{i+M-1}*R^0
+$$
+而通过滑动窗口得到的下一个字符串的数值表达式为：
+$$
+x_{i+1}=x_iR-t_iR^{M-1}R+t_{i+M}R^0\\
+=(x_i-t_iR^{M-1})+t_{i+M}
+$$
+因此我们可以从上面推导出来的表达式得知：我们可以从之前计算得到关于$x_i$的hash值，进而通过上述的公式计算下一个子字符串的hash值。
+
+这样我们就可以根据模式字符串的hash和文本串在滑动过程产生的hash值一一比较，然后找到那个想要的子字符串的起始下标位置。
 
 ```java
 import edu.princeton.cs.algs4.StdOut;
@@ -1163,46 +1276,51 @@ import java.util.Random;
 
 public class RobinKarp {
     private long patHash;
-    private int M;
-    private long Q;
     private int R = 256;
-    private long RM;
+    private long Q;
+    private int M;
+    private long RM;    //R^(M-1) % Q
 
-    public RobinKarp(String pat) {
-        this.M = pat.length();
-        Q = longRandomPrime();
+    //对Hash值匹配一致的字符串再次执行检验，不过我们这里并没有真正这么做
+    private boolean check(int i) {
+        return true;
+    }
+
+    //计算一个长素数
+    private static long makeprime() {
+        BigInteger prime = new BigInteger(31, new Random());
+        return prime.longValue();
+    }
+
+    //使用Horner方法计算R进制M长字符串的Hash值
+    private long hash(String str, int M) {
+        long h = 0;
+        for (int i = 0; i < M; ++i)
+            h = (R * h + str.charAt(i)) % Q;
+        return h;
+    }
+
+    RobinKarp(String pat) {
+        M = pat.length();
+        Q = makeprime();
         RM = 1;
-        for (int i = 1; i <= M - 1; i++)
+        for (int i = 1; i < M; ++i)
             RM = (R * RM) % Q;
         patHash = hash(pat, M);
     }
 
-    private static long longRandomPrime() {
-        BigInteger prime = BigInteger.probablePrime(31, new Random());
-        return prime.longValue();
-    }
-
-    public boolean check(int i) {
-        return true;
-    }
-
-    private long hash(String key, int M) {
-        long h = 0;
-        for (int j = 0; j < M; j++)
-            h = (R * h + key.charAt(j)) % Q;
-        return h;
-    }
-
     public int search(String txt) {
         int N = txt.length();
-        long txtHash = hash(txt, M);
-        if (patHash == txtHash && check(0)) return 0;
+        long txthash = hash(txt, M);
+
+        //若txt中的第一个子字符串就是想要找的，那么直接检验后返回
+        if (txthash == patHash && check(0)) return 0;
         for (int i = M; i < N; ++i) {
-            txtHash = (txtHash + Q - RM * txt.charAt(i - M) % Q) % Q;
-            txtHash = (txtHash * R + txt.charAt(i)) % Q;
-            if (patHash == txtHash)
-                if (check(i - M + 1))
-                    return i - M + 1;
+            //计算：[(x_i + R^(M - 1)) * R + t_(i + M)] mode Q
+            txthash = (txthash + Q - RM * txt.charAt(i - M) % Q) % Q;
+            txthash = (txthash * R + txt.charAt(i)) % Q;
+            if (txthash == patHash && check(i - M + 1))
+                return i - M + 1;
         }
         return -1;
     }
@@ -1210,12 +1328,29 @@ public class RobinKarp {
     public static void main(String[] args) {
         String txt = "hello world", pat = "world";
         RobinKarp robinKarp = new RobinKarp(pat);
-        int r = robinKarp.search(txt);
-        StdOut.println(r);
-        if (r != -1) StdOut.println(txt.substring(r));
+        int index = robinKarp.search(txt);
+
+        StdOut.println(index);
+        if (index != -1)
+            StdOut.println(txt.substring(index));
     }
 }
 ```
 
 
+
+各种子字符串查找算法对比总结：
+
+|    算法     | 时间复杂度（最坏） | 时间复杂度（一般） | 空间复杂度 | 是否存在文本重复比较（回溯） |
+| :---------: | :----------------: | :----------------: | :--------: | :--------------------------: |
+|  暴力匹配   |        $MN$        |       $1.1N$       |    $1$     |              ✔               |
+|     KMP     |        $3N$        |       $1.1N$       |    $M$     |              ✘               |
+| Boyer-Moore |        $MN$        |       $N/M$        |    $R$     |              ✘               |
+| Rabin-Karp  |        $7N$        |        $7N$        |    $1$     |              ✔               |
+
+其中KMP和Rabin-Karp算法的时间复杂度在线性阶，Boyer-Moore算法的时间复杂度在亚线性阶，但两者都需要额外的辅助空间。
+
+
+
+### 5.4 正则表达式
 
