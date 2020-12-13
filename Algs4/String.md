@@ -919,7 +919,7 @@ public class StrSearch {
 
 
 
-#### 5.3.2  KMP匹配算法
+#### 5.3.2  KMP字符串查找算法
 
 因为算法4中使用的有限状态自动机的方式来讲解KMP算法，我个人不是很喜欢那种理解方式，所以采用一般算法书籍中常用的“最大公共前后缀计算”的方式来讲解这一内容，并使用C++实现。
 
@@ -1243,7 +1243,7 @@ int main() {
 
 
 
-#### 5.3.4 Rabin-Karp指纹字符串查找算法
+#### 5.3.4 Rabin-Karp字符串查找算法
 
 Rabin-Karp算法是一种基于Hash函数的字符串查找算法。其核心思想就是：**计算模式字符串的Hash值，然后用相同的Hash函数计算文本中所有可能的M个字符长度的子字符串的Hash值并一一匹配。若匹配成功，则再进行一次检验**（可能两两计算使用更大质数得到的Hash值）**，然后返回对应的子字符串起始下标。**
 
@@ -1353,4 +1353,99 @@ public class RobinKarp {
 
 
 ### 5.4 正则表达式
+
+常见的正则表达式符号：
+
+|  \|   |                      或操作                      |
+| :---: | :----------------------------------------------: |
+| （）  |                       括号                       |
+|   *   |        闭包操作：前面字符串重复0次或多次         |
+|   +   |         闭包操作：前面字符串至少重复1次          |
+|  ？   |         闭包操作：前面字符串重复0次或1次         |
+|  {n}  |         闭包操作：前面字符串重复指定n次          |
+| {m-n} |          闭包操作：前面字符串重复m到n次          |
+|   .   |             通配符，表示一个任意字符             |
+|  []   |             指定的字符集合中的任一个             |
+|   -   | 范围指示，表示从哪个字符开始到哪个字符结束的范围 |
+|   ^   |    补集，\[^ab\]表示不包括a、b的所有字符集合     |
+|   \   |                     转义符号                     |
+
+
+
+NFA代码：
+
+```java
+import edu.princeton.cs.algs4.*;
+
+public class NFA {
+    private char[] re;
+    private Digraph G;
+    private int M;
+
+    public NFA(String regexp) {
+        Stack<Integer> ops = new Stack<Integer>();
+        re = regexp.toCharArray();
+        M = re.length;
+        G = new Digraph(M + 1);
+
+        for (int i = 0; i < M; i++) {
+            int lp = i;
+            if (re[i] == '(' || re[i] == '|')
+                ops.push(i);
+            else if (re[i] == ')') {
+                int or = ops.pop();
+                if (re[or] == '|') {
+                    lp = ops.pop();
+                    G.addEdge(lp, or + 1);
+                    G.addEdge(or, i);
+                } else lp = or;
+            }
+            if (i < M - 1 && re[i + 1] == '*') {
+                G.addEdge(lp, i + 1);
+                G.addEdge(i + 1, lp);
+            }
+            if (re[i] == '(' || re[i] == '*' || re[i] == ')')
+                G.addEdge(i, i + 1);
+        }
+    }
+
+    public boolean recognizes(String txt) {
+        Bag<Integer> pc = new Bag<Integer>();
+        DirectedDFS dfs = new DirectedDFS(G, 0);
+        for (int v = 0; v < G.V(); v++)
+            if (dfs.marked(v)) pc.add(v);
+
+        for (int i = 0; i < txt.length(); ++i) {
+            Bag<Integer> match = new Bag<Integer>();
+            for (int v : pc)
+                if (v < M)
+                    if (re[v] == txt.charAt(i) || re[v] == '.')
+                        match.add(v + 1);
+            pc = new Bag<Integer>();
+            dfs = new DirectedDFS(G, match);
+            for (int v = 0; v < G.V(); ++v)
+                if (dfs.marked(v)) pc.add(v);
+        }
+
+        for (int v : pc) if (v == M) return true;
+        return false;
+    }
+
+    public static void main(String[] args) {
+        String regexp = "(.*" + args[0] + ".*)";
+        NFA nfa = new NFA(regexp);
+        In in = new In(args[1]);
+
+        while (in.hasNextLine()) {
+            String txt = in.readLine();
+            if (nfa.recognizes(txt))
+                StdOut.println(txt);
+        }
+    }
+}
+```
+
+
+
+### 5.5 数据压缩
 
