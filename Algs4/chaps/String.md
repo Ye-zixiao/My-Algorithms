@@ -1449,3 +1449,87 @@ public class NFA {
 
 ### 5.5 数据压缩
 
+#### 5.5.1 读写二进制
+
+将文本中的数据以01形式二进制的形式展示：
+
+```java
+import edu.princeton.cs.algs4.BinaryIn;
+import edu.princeton.cs.algs4.StdOut;
+
+public class BinaryDump {
+    public static void main(String[] args) {
+        int cnt, width = Integer.parseInt(args[0]);
+        BinaryIn bin = new BinaryIn(args[1]);
+
+        for (cnt = 0; !bin.isEmpty(); cnt++) {
+            if (width == 0) continue;
+            if (cnt != 0 && cnt % width == 0)
+                StdOut.println();
+            if (bin.readBoolean())
+                StdOut.print("1");
+            else StdOut.print("0");
+        }
+        StdOut.println();
+        StdOut.println(cnt + " bits");
+    }
+}
+```
+
+将文本中的数据以十六进制形式输出展示：
+
+```java
+import edu.princeton.cs.algs4.BinaryIn;
+import edu.princeton.cs.algs4.StdOut;
+
+public class HexDump {
+    public static void main(String[] args) {
+        int i, bytesPerLine = Integer.parseInt(args[0]);
+        BinaryIn binaryIn = new BinaryIn(args[1]);
+
+        for (i = 0; !binaryIn.isEmpty(); ++i) {
+            if (i == 0) StdOut.print("");
+            else if (i % bytesPerLine == 0)
+                StdOut.println();
+            else
+                StdOut.print(" ");
+
+            char c = binaryIn.readChar();
+            StdOut.printf("%02x", c & 0xff);
+        }
+        StdOut.println("\n" + (i * 8) + " bits");
+    }
+}
+```
+
+将文本中的数据以图片形式展示其中的每一个比特位：
+
+```java
+import edu.princeton.cs.algs4.BinaryIn;
+import edu.princeton.cs.algs4.Picture;
+
+import java.awt.*;
+
+public class PictureDump {
+    public static void main(String[] args) {
+        int width = Integer.parseInt(args[0]);
+        int height = Integer.parseInt(args[1]);
+        BinaryIn bin = new BinaryIn(args[2]);
+        Picture picture = new Picture(width, height);
+
+        for (int row = 0; row < height; ++row) {
+            for (int col = 0; col < width; ++col) {
+                if (!bin.isEmpty()) {
+                    boolean bit = bin.readBoolean();
+                    if (bit) picture.set(col, row, Color.BLACK);
+                    else picture.set(col, row, Color.WHITE);
+                } else picture.set(col, row, Color.RED);
+            }
+        }
+        picture.show();
+    }
+}
+```
+
+
+
