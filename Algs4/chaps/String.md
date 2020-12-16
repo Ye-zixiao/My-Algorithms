@@ -1533,3 +1533,59 @@ public class PictureDump {
 
 
 
+##### 5.5.1.1  基因数据双位编码
+
+由于生物学中使用ACTG这4个字符来表示DNA中不同的碱基，因此我们对于每一个字符实际上只需要用2个比特就可以实现数据的表示。这样压缩的原理就是：遍历原先表示DNA的字符串，找出每一个字符在ACTG字母表中的下标，然后对这个下标进行2位编码，并在编码后的数据头部加入字符总数以方便解码使用。由于原先每一个字符需要8个比特进行，现在却只需要2个比特就可以完成相同的功能，因此压缩比接近25%.
+
+<img src="../image/双位编码.jpg" alt="双位编码" style="zoom:50%;" />
+
+不过这种编码方式压缩和解码的所需要的字母表都是实现两者约定好的，但是在实际的一些情况下可能未必如此，很有可能对方并不知道这些字母表，因此实际编码后的数据中不仅需要指出压缩数据的总量，还需要指出字母表的内容等。
+
+```java
+import edu.princeton.cs.algs4.*;
+
+public class Genome {
+    public static void compress(BinaryIn bin, BinaryOut bout) {
+        Alphabet DNA = new Alphabet("ACTG");
+        String s = bin.readString();
+        int N = s.length();
+
+        bout.write(N);
+        for (int i = 0; i < N; ++i) {
+            /* 按照DNA的基数对字符在字母表中的下标进行编码，在这里
+             *  基数为2，表示只需要2个比特就可以表示一个原始的字符，
+             *  然后将这2个比特写入到比特流中  */
+            int d = DNA.toIndex(s.charAt(i));
+            bout.write(d, DNA.lgR());
+        }
+        bout.close();
+    }
+
+    public static void expand(BinaryIn bin) {
+        Alphabet DNA = new Alphabet("ACTG");
+        int w = DNA.lgR();
+        int N = bin.readInt();
+
+        for (int i = 0; i < N; ++i) {
+            //从bin中读入2位比特，然后将其按照DNA字母表的下标返回原始的字符
+            char c = bin.readChar(w);
+            StdOut.print(DNA.toChar(c));
+        }
+    }
+
+    public static void main(String[] args) {
+        BinaryIn bin = new BinaryIn(args[1]);
+        if (args[0].equals("+"))
+            expand(bin);
+        if (args[0].equals("-")) {
+            BinaryOut bout = new BinaryOut(args[2]);
+            compress(bin, bout);
+        }
+    }
+}
+```
+
+
+
+#### 5.5.2 游程编码
+
