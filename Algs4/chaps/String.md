@@ -1589,3 +1589,71 @@ public class Genome {
 
 #### 5.5.2 游程编码
 
+游程编码的思想非常简单，就是依次记录连续的0或者连续的1的个数，例如000000011111111000，则可以被游程编码压缩成用783（其中这些压缩后的每一个数根据实际情况采用多少位来表示，书中假设用8位bits来表示一个数）。
+
+由于游程编码本身就非常依赖数据文件中存在大量连续0或者连续1事实条件，因此在实际中并不适合文本文件的压缩，因为文本文件出现连续0或者连续1的情况太少了，采用游程编码反而会产生更大的压缩文件。
+
+```java
+import edu.princeton.cs.algs4.BinaryIn;
+import edu.princeton.cs.algs4.BinaryOut;
+
+public class RunLength {
+    public static void expand(BinaryIn bin, BinaryOut bout) {
+        boolean b = false;
+        while (!bin.isEmpty()) {
+            char cnt = bin.readChar();
+            for (int i = 0; i < cnt; ++i)
+                bout.write(b);
+            b = !b;//翻转比特值
+        }
+        bout.close();
+    }
+
+    public static void compress(BinaryIn bin, BinaryOut bout) {
+        char cnt = 0;//相同比特计数
+        for (boolean b, old = false; !bin.isEmpty(); ++cnt) {
+            b = bin.readBoolean();
+            if (b != old) {
+                bout.write(cnt);
+                cnt = 0;
+                old = !old;
+            } else {
+                if (cnt == 255) {
+                    bout.write(cnt);
+                    cnt = 0;
+                    bout.write(cnt);
+                }
+            }
+        }
+        bout.write(cnt);
+        bout.close();
+    }
+
+    public static void main(String[] args) {
+        BinaryIn bin = new BinaryIn(args[1]);
+        BinaryOut bout = new BinaryOut(args[2]);
+        if (args[0].equals("-"))
+            compress(bin, bout);
+        else if (args[0].equals("+"))
+            expand(bin, bout);
+    }
+}
+```
+
+
+
+#### 5.5.3 霍夫曼编码
+
+
+
+霍夫曼编码的大致过程：
+
+1. **建树**：遍历文本中所有的字符，根据字符频率使用优先队列构建霍夫曼编码树；
+2. **建立比特表**：根据上述编码树构建出字符到编码的对应表；
+3. **将编码树比特化写入到输出文件头部**：对树使用前序遍历，将霍夫曼编码树比特化，方便解压的一方获取编码树信息；
+4. **压缩编码写入文件**。
+
+霍夫曼解压缩的大致过程：
+
+1. **建树**：根据压缩文件头部信息反向构建霍夫曼编码树；
+2. **解码剩余的文件数据**。
