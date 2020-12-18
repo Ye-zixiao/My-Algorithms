@@ -1537,7 +1537,7 @@ public class PictureDump {
 
 由于生物学中使用ACTG这4个字符来表示DNA中不同的碱基，因此我们对于每一个字符实际上只需要用2个比特就可以实现数据的表示。这样压缩的原理就是：遍历原先表示DNA的字符串，找出每一个字符在ACTG字母表中的下标，然后对这个下标进行2位编码，并在编码后的数据头部加入字符总数以方便解码使用。由于原先每一个字符需要8个比特进行，现在却只需要2个比特就可以完成相同的功能，因此压缩比接近25%.
 
-<img src="../image/双位编码.jpg" alt="双位编码" style="zoom:50%;" />
+<img src="image/双位编码.jpg" alt="双位编码" style="zoom:50%;" />
 
 不过这种编码方式压缩和解码的所需要的字母表都是实现两者约定好的，但是在实际的一些情况下可能未必如此，很有可能对方并不知道这些字母表，因此实际编码后的数据中不仅需要指出压缩数据的总量，还需要指出字母表的内容等。
 
@@ -1644,16 +1644,267 @@ public class RunLength {
 
 #### 5.5.3 霍夫曼编码
 
+霍夫曼树的核心思想很简单，即：不再使用7位或8位的二进制数表示每一个字符，而是使用较少的比特表示表示频率较高的字符，用较多的比特表示出现频率较低的字符。并使用变长前缀码来避免表示不同字符的编码前缀重复的问题。
 
+##### 5.5.3.1 构建霍夫曼树
+
+实现霍夫曼编码的关键在于根据字符的频率构建霍夫曼树。在霍夫曼树中，出现频率较低的字符所处的叶节点距离树的根结点更远，出现频率较高的字符所处的叶节点距离树的根结点更近，且这些字符绝对不会位于树中间路径上的结点中，这样就可以防止某些字符的编码变成了其他字符编码的前缀。
+
+<img src="image/2020-12-18 144411.png" alt="2020-12-18 144411" style="zoom:80%;" />
+
+为了构建霍夫曼树，我们必须先遍历一遍整个文本，将文本中的字符频率进行统计。然后根据这个频率表依次为每一个字符创建一个树节点（即一个森林），每一个树节点记录着表示字符的出现频率，然后加入到一个优先队列之中。然后每一次从优先队列中取出频率最小的两个树进行合并成新的树（同时频率也进行相加），然后重新加入到队列之中，直到优先队列中只剩下一个树。此时这个剩下的树便是霍夫曼树。下面演示了霍夫曼树的构建过程：
+
+<img src="image/2020-12-18 145044.png" alt="2020-12-18 145044" style="zoom: 80%;" />
+
+```java
+    /* 构建霍夫曼树 */
+    private static Node buildTries(int[] freq) {
+        MinPQ<Node> pq = new MinPQ<Node>();
+
+        /* 为频率数组中的每一个（频率）元素构建一群单树节点
+          （或者说是一群树，即森林），并将其加入到优先队列之中 */
+        for (char c = 0; c < R; ++c)
+            if (freq[c] > 0)
+                pq.insert(new Node(c, freq[c], null, null));
+        /* 从优先队列中取出两棵树合并成一颗新的树，然后重新加入到
+        优先队列之中。需要注意的是：其中的两颗树的频率也需要合并 */
+        while (pq.size() > 1) {
+            Node x = pq.delMin();
+            Node y = pq.delMin();
+            Node parent = new Node('\0', x.freq + y.freq, x, y);
+            pq.insert(parent);
+        }
+        return pq.delMin();
+    }
+```
+
+
+
+##### 5.5.3.2  构建字符-变长前缀码映射表
+
+为了方便将文本中的字符编码成边长前缀码而不至于为每一个字符去霍夫曼树中查找相应的字符，我们需要为每一个霍夫曼中的字符构建一个字符->变长前缀码的映射表。其实际的操作就是前序遍历，记录每一个到叶节点路径上的编码，然后保存在一个数组之中（我们实际上还是以0101的字符去记录）。
+
+```java
+    /* 建立一个字符到二进制编码（仍然以字符形式保存）的映射表格 */
+    private static void buildCode(String[] st, Node x, String s) {
+        if (x.isLeaf()) {
+            st[x.ch] = s;
+            return;
+        }
+        buildCode(st, x.left, s + '0');
+        buildCode(st, x.right, s + '1');
+    }
+
+    private static String[] buildCode(Node root) {
+        String[] st = new String[R];
+        buildCode(st, root, "");
+        return st;
+    }
+```
+
+
+
+##### 5.5.3.3  写入/读入霍夫曼树二进制数据
+
+为了能够让解码端能够根据压缩后的变长前缀码集合反向解压出原始的文本数据，霍夫曼压缩算法需要将构建的霍夫曼树一同写入到压缩文件之中，并且放置在文件的头部处。同样的，对于解压的一方，解压算法需要从解压文件中获取霍夫曼树的二进制数据，反向构建出霍夫曼树。
+
+对于霍夫曼树的写入，其所采用的方法为：采用**前序遍历**。每当访问到一个中间路径的树节点就向压缩输出文件写入一个比特0；当它访问当一个叶节点，就会写入一个比特1，紧接着写入叶节点中记录的8位ASCII码。
+
+```java
+    /* 将构建的霍夫曼树以二进制数据写入到压缩文件中。写入方式为
+     * 中序遍历，若遍历到的结点为中间路径节点，就写入一个0；若
+     * 遍历到的结点是叶节点，则写入一个1，然后写入对应的字符 */
+    private static void writeTries(Node x, BinaryOut bout) {
+        if (x.isLeaf()) {
+            bout.write(true);
+            bout.write(x.ch);
+            return;
+        }
+        bout.write(false);
+        writeTries(x.left, bout);
+        writeTries(x.right, bout);
+    }
+```
+
+对于反向构建霍夫曼树，其所采用的方法为：首先读取一个比特以获知当前树节点的类型，若是1则表示是叶节点，此时就创建一个叶节点然后读取后面8位比特获得字符信息然后返回引用；若是0则表示是中间路径节点，此时就创建一个中间路径节点然后递归的构造它的左子树和右子树。这里的代码还是值得学习的
+
+```java
+    /* 从压缩文件中读取出数据并构建霍夫曼树 */
+    private static Node readTries(BinaryIn bin) {
+        /* 碰到1，则表示后面的数据是叶节点的字符数据，
+            此时新建一个叶节点返回给上一层 */
+        if (bin.readBoolean())
+            return new Node(bin.readChar(), 0, null, null);
+        //碰到0，递归处理下一个二进制数
+        return new Node('\0', 0, readTries(bin), readTries(bin));
+    }
+```
+
+##### 5.5.3.4  压缩/解压算法流程
 
 霍夫曼编码的大致过程：
 
-1. **建树**：遍历文本中所有的字符，根据字符频率使用优先队列构建霍夫曼编码树；
-2. **建立比特表**：根据上述编码树构建出字符到编码的对应表；
-3. **将编码树比特化写入到输出文件头部**：对树使用前序遍历，将霍夫曼编码树比特化，方便解压的一方获取编码树信息；
-4. **压缩编码写入文件**。
+1. **构建频率表**：遍历文本中的所有字符，记录每一个出现字符的频率
+2. **构建霍夫曼树**：遍历文本中所有的字符，根据字符频率使用优先队列构建霍夫曼编码树；
+3. **建立字符-编码映射表**：根据上述编码树构建出字符到变长前缀码（仍以字符串形式记录）的对应表；
+4. **将霍夫曼树比特化写入到输出文件头部**：对树使用前序遍历，将霍夫曼编码树比特化，方便解压的一方获取编码树信息；
+5. **将文本中的字符数量写入到压缩文件**；
+6. **为每一个字符执行编码工作**：将变长前缀码写入到压缩文件之中。
 
 霍夫曼解压缩的大致过程：
 
-1. **建树**：根据压缩文件头部信息反向构建霍夫曼编码树；
-2. **解码剩余的文件数据**。
+1. **根据重建霍夫曼树**：根据压缩文件头部信息反向构建霍夫曼编码树；
+2. **读取文件字符串长度**；
+3. **根据霍夫曼树解码剩余的文件数据**。
+
+<img src="image/霍夫曼编码.jpg" alt="霍夫曼编码" style="zoom: 50%;" />
+
+```java
+import edu.princeton.cs.algs4.BinaryIn;
+import edu.princeton.cs.algs4.BinaryOut;
+import edu.princeton.cs.algs4.MinPQ;
+
+public class Huffman {
+    private static int R = 256;
+
+    private static class Node implements Comparable<Node> {
+        private char ch;        //当前结点表示字符，若为中间路径结点则直接设置为‘\0’
+        private int freq;       //当前字符出现的频率
+        private final Node left, right;
+
+        Node(char ch, int freq, Node left, Node right) {
+            this.ch = ch;
+            this.freq = freq;
+            this.left = left;
+            this.right = right;
+        }
+
+        public boolean isLeaf() {
+            return left == null && right == null;
+        }
+
+        public int compareTo(Node that) {
+            return this.freq - that.freq;
+        }
+    }
+
+    /* 构建霍夫曼树 */
+    private static Node buildTries(int[] freq) {
+        MinPQ<Node> pq = new MinPQ<Node>();
+
+        /* 为频率数组中的每一个（频率）元素构建一群单树节点
+          （或者说是一群树，即森林），并将其加入到优先队列之中 */
+        for (char c = 0; c < R; ++c)
+            if (freq[c] > 0)
+                pq.insert(new Node(c, freq[c], null, null));
+        /* 从优先队列中取出两棵树合并成一颗新的树，然后重新加入到
+        优先队列之中。需要注意的是：其中的两颗树的频率也需要合并 */
+        while (pq.size() > 1) {
+            Node x = pq.delMin();
+            Node y = pq.delMin();
+            Node parent = new Node('\0', x.freq + y.freq, x, y);
+            pq.insert(parent);
+        }
+        return pq.delMin();
+    }
+
+    /* 将构建的霍夫曼树以二进制数据写入到压缩文件中。写入方式为
+     * 中序遍历，若遍历到的结点为中间路径节点，就写入一个0；若
+     * 遍历到的结点是叶节点，则写入一个1，然后写入对应的字符 */
+    private static void writeTries(Node x, BinaryOut bout) {
+        if (x.isLeaf()) {
+            bout.write(true);
+            bout.write(x.ch);
+            return;
+        }
+        bout.write(false);
+        writeTries(x.left, bout);
+        writeTries(x.right, bout);
+    }
+
+    /* 从压缩文件中读取出数据并构建霍夫曼树 */
+    private static Node readTries(BinaryIn bin) {
+        /* 碰到1，则表示后面的数据是叶节点的字符数据，
+            此时新建一个叶节点返回给上一层 */
+        if (bin.readBoolean())
+            return new Node(bin.readChar(), 0, null, null);
+        //碰到0，递归处理下一个二进制数
+        return new Node('\0', 0, readTries(bin), readTries(bin));
+    }
+
+    /* 建立一个字符到二进制编码（仍然以字符形式保存）的映射表格 */
+    private static void buildCode(String[] st, Node x, String s) {
+        if (x.isLeaf()) {
+            st[x.ch] = s;
+            return;
+        }
+        buildCode(st, x.left, s + '0');
+        buildCode(st, x.right, s + '1');
+    }
+
+    private static String[] buildCode(Node root) {
+        String[] st = new String[R];
+        buildCode(st, root, "");
+        return st;
+    }
+
+
+    /* 压缩 */
+    public static void compress(BinaryIn bin, BinaryOut bout) {
+        String s = bin.readString();
+        char[] input = s.toCharArray();
+        int[] freq = new int[R];
+
+        //1、构建字符出现频率数组
+        for (int i = 0; i < input.length; ++i)
+            freq[input[i]]++;
+        //2、根据频率数组构建霍夫曼树
+        Node root = buildTries(freq);
+        //3、根据霍夫曼树构建字符到二进制编码（该编码还是以字符串的形式记录）的映射表
+        String[] st = new String[R];
+        buildCode(st, root, "");
+
+        //4、先向压缩文件中写入霍夫曼树
+        writeTries(root, bout);
+        //5、再向压缩文件写如实际记录的字符数量
+        bout.write(input.length);
+        //6、最后正式写入由字符翻译成的变长前缀码
+        for (int i = 0; i < input.length; ++i) {
+            String code = st[input[i]];
+            for (int j = 0; j < code.length(); ++j) {
+                if (code.charAt(j) == '1')
+                    bout.write(true);
+                else bout.write(false);
+            }
+        }
+        bout.close();
+    }
+
+    /* 解压 */
+    public static void expand(BinaryIn bin, BinaryOut bout) {
+        //1、先从压缩文件中头部读入二进制数据，构建霍夫曼树
+        Node root = readTries(bin);
+        //2、再从压缩文件中读入数据字符数量值
+        int N = bin.readInt();
+        //3、此时根据霍夫曼树翻译其中存储的变长前缀码
+        for (int i = 0; i < N; i++) {
+            Node x = root;
+            while (!x.isLeaf()) {
+                if (bin.readBoolean())
+                    x = x.right;
+                else x = x.left;
+            }
+            bout.write(x.ch);
+        }
+        bout.close();
+    }
+
+    public static void main(String[] args) {
+        BinaryIn bin = new BinaryIn(args[1]);
+        BinaryOut bout = new BinaryOut(args[2]);
+        if (args[0].equals("-")) compress(bin, bout);
+        else if (args[0].equals("+")) expand(bin, bout);
+    }
+}
+```
+
