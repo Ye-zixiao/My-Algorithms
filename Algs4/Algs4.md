@@ -1046,11 +1046,11 @@ public class Sort {
         else if (high - low < 15)
             InsertSort(a, low, high);
         else {
-            StdOut.println("get here?");
             int mid = low + (high - low) / 2;
             msort(a, low, mid);
             msort(a, mid + 1, high);
-            if (less(a[mid + 1], a[mid]))//若该局部数组已经有序，则不需要再进入merge之中
+            //若该局部数组已经有序，则不需要再进入merge之中
+            if (less(a[mid + 1], a[mid]))
                 merge(a, low, mid, high);
         }
     }
