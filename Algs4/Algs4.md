@@ -2483,8 +2483,8 @@ void BSTPrint(const struct BST* bst) {
         else if (cmp > 0)
             x.right = put(x.right, key, val);
         else x.val = val;
-        //对于当前节点而言，更新N没什么用，但是对其父节点及其祖先节点是必要的
-//        x.N=size(x.left)+size(x.right)+1;
+//		对于当前节点而言，更新N没什么用，但是对其父节点及其祖先节点是必要的
+//      x.N=size(x.left)+size(x.right)+1;
         x.N++;
         return x;
     }
@@ -2497,7 +2497,7 @@ void BSTPrint(const struct BST* bst) {
 
 图示：
 
-<img src="E:/Desktop/Algorithms/Algs4/image/2020-11-08 111923.png" alt="2020-11-08 111923" style="zoom: 80%;" />
+<img src="image/2020-11-08 111923.png" alt="2020-11-08 111923" style="zoom: 80%;" />
 
 > 注意：这里采用的是使用return返回更新好结点的指针（引用）的方式递归向上传递给父结点，通知其最新的左/右子结点的指针（引用），从而来完成子结点的更新（删除或者删除）。例如如下形式就是典型的使用形式：
 >
@@ -2554,7 +2554,7 @@ void BSTPrint(const struct BST* bst) {
 
 图示：
 
-<img src="E:/Desktop/Algorithms/Algs4/image/2020-11-08 112439.png" alt="2020-11-08 112439" style="zoom:80%;" />
+<img src="image/2020-11-08 112439.png" alt="2020-11-08 112439" style="zoom:80%;" />
 
 *删除任意结点*的关键在于：`区分只有一个或者无子树的结点（可以看作是像deleteMin()一样的操作）和左右子树同时存在的结点`。无子树或者只有一个子树的结点只要将左子树（若存在）或者右子树接到待删结点的父结点的左/右边。而**左右子树同时存在的结点，需要在删除时暂时记录待删结点的引用，然后取出待删结点右子树中的最小结点用其来替代待删结点（需要将其执行deleteMin()操作），然后将调整后的左右子树挂在该替代节点的左右两边。**
 
@@ -2590,7 +2590,7 @@ void BSTPrint(const struct BST* bst) {
 
 图示：
 
-<img src="E:/Desktop/Algorithms/Algs4/image/2020-11-08 113310.png" alt="2020-11-08 113310" style="zoom:80%;" />
+<img src="image/2020-11-08 113310.png" alt="2020-11-08 113310" style="zoom:80%;" />
 
 
 
@@ -2626,7 +2626,7 @@ void BSTPrint(const struct BST* bst) {
 
 图示：
 
-![2020-11-08 115926](E:/Desktop/Algorithms/Algs4/image/2020-11-08 115926.png)
+![2020-11-08 115926](image/2020-11-08 115926.png)
 
 
 
@@ -2657,7 +2657,7 @@ void BSTPrint(const struct BST* bst) {
 
 图示：
 
-<img src="E:/Desktop/Algorithms/Algs4/image/2020-11-08 120041.png" alt="2020-11-08 120041" style="zoom:80%;" />
+<img src="image/2020-11-08 120041.png" alt="2020-11-08 120041" style="zoom:80%;" />
 
 
 
@@ -2685,7 +2685,7 @@ void BSTPrint(const struct BST* bst) {
 
 图示：
 
-<img src="E:/Desktop/Algorithms/Algs4/image/2020-11-08 120703.png" alt="2020-11-08 120703" style="zoom:80%;" />
+<img src="image/2020-11-08 120703.png" alt="2020-11-08 120703" style="zoom:80%;" />
 
 而返回指定键位置的rank()方法，则很容易用size()方法递归计算出来
 
