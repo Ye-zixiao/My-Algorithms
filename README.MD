@@ -6,9 +6,9 @@
 
 大话数据结构这本书是我接触数据结构的入门之作，简单但很多东西其实讲的模糊、也不够全面。当时自己的代码功底也不是很好，写的代码也不咋地，但回过头来重新看还是觉得蛮有意思的😂。
 
-代码：[source code](Play With Data Structure/src)
+代码：[source code](Play-With-Data-Structure/src)
 
-思维导图：[mindmap](Play With Data Structure/思维导图)
+思维导图：[mindmap](Play-With-Data-Structure/思维导图)
 
 
 
